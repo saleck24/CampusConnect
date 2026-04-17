@@ -102,11 +102,21 @@ const refuseAssociation = async (associationId) => {
     return result.affectedRows > 0;
 };
 
+// Récupérer l'ID de l'association dont l'utilisateur est responsable
+const getUserAssociationId = async (userId) => {
+    const [rows] = await pool.execute(
+        'SELECT association_id FROM association_members WHERE user_id = ? AND status = "approved"',
+        [userId]
+    );
+    return rows.length > 0 ? rows[0].association_id : null;
+};
+
 module.exports = {
     create,
     getAllValidated,
     getById,
     getPendingRequests,
     validateAssociation,
-    refuseAssociation
+    refuseAssociation,
+    getUserAssociationId
 };

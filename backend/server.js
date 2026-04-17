@@ -24,13 +24,20 @@ app.use(express.urlencoded({ extended: true }));
 // Raccourci vers les dossiers d'uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Documentation Swagger
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swaggerConfig');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Routes API
 const authRoutes = require('./routes/authRoutes');
 const associationRoutes = require('./routes/associationRoutes');
 const userRoutes = require('./routes/userRoutes');
+const eventRoutes = require('./routes/eventRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/associations', associationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/events', eventRoutes);
 
 // Routes de test
 app.get('/', (req, res) => {
@@ -53,5 +60,6 @@ app.listen(PORT, () => {
     console.log(`=========================================`);
     console.log(`Serveur CampusConnect démarré sur le port ${PORT}`);
     console.log(`Routes actives sous /api/...`);
+    console.log(`Documentation Swagger : http://localhost:${PORT}/api-docs`);
     console.log(`=========================================`);
 });

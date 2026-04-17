@@ -7,9 +7,9 @@ const findAll = async () => {
         SELECT e.*, a.name as association_name, a.logo_url as association_logo
         FROM events e
         JOIN associations a ON e.association_id = a.id
-        WHERE e.date >= NOW() AND e.is_cancelled = FALSE
+        WHERE e.end_date >= NOW() AND e.is_cancelled = FALSE
         ORDER BY e.date ASC
-    `);
+    `, []);
     return rows;
 };
 
@@ -21,6 +21,31 @@ const findById = async (id) => {
         WHERE e.id = ?
     `, [id]);
     return rows[0];
+};
+
+// Pour Admin et Responsable : tous les événements (passés inclus)
+const findByAssociation = async (associationId) => {
+    const [rows] = await pool.execute(`
+        SELECT e.*, a.name as association_name,
+               (SELECT COUNT(*) FROM registrations WHERE event_id = e.id) as participant_count
+        FROM events e
+        JOIN associations a ON e.association_id = a.id
+        WHERE e.association_id = ? AND e.is_cancelled = FALSE
+        ORDER BY e.date DESC
+    `, [associationId]);
+    return rows;
+};
+
+const findAll_admin = async () => {
+    const [rows] = await pool.execute(`
+        SELECT e.*, a.name as association_name,
+               (SELECT COUNT(*) FROM registrations WHERE event_id = e.id) as participant_count
+        FROM events e
+        JOIN associations a ON e.association_id = a.id
+        WHERE e.is_cancelled = FALSE
+        ORDER BY e.date DESC
+    `, []);
+    return rows;
 };
 
 const create = async (eventData) => {
@@ -62,6 +87,18 @@ const register = async (user_id, event_id, price) => {
     return result.insertId;
 };
 
+// Récupérer les participants d'un événement
+const getParticipants = async (eventId) => {
+    const [rows] = await pool.execute(`
+        SELECT u.id, u.name, u.email, r.created_at as registered_at, r.price_applied
+        FROM registrations r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.event_id = ?
+        ORDER BY r.created_at DESC
+    `, [eventId]);
+    return rows;
+};
+
 const getRegistrationCount = async (event_id) => {
     const [rows] = await pool.execute(
         'SELECT COUNT(*) as count FROM registrations WHERE event_id = ?',
@@ -78,12 +115,34 @@ const isUserRegistered = async (user_id, event_id) => {
     return rows.length > 0;
 };
 
+const update = async (id, fields) => {
+    const { title, description, date, end_date, location, max_participants, is_paid, guest_price, member_price } = fields;
+    await pool.execute(`
+        UPDATE events SET title=?, description=?, date=?, end_date=?, location=?, 
+        max_participants=?, is_paid=?, guest_price=?, member_price=? WHERE id=?
+    `, [title, description, date, end_date, location, max_participants, is_paid, guest_price, member_price, id]);
+};
+
+const softDelete = async (id) => {
+    await pool.execute('UPDATE events SET is_cancelled = TRUE WHERE id = ?', [id]);
+};
+
+const unregister = async (user_id, event_id) => {
+    await pool.execute('DELETE FROM registrations WHERE user_id = ? AND event_id = ?', [user_id, event_id]);
+};
+
 module.exports = {
     findAll,
     findById,
+    findByAssociation,
+    findAll_admin,
     create,
     checkConflict,
     register,
     getRegistrationCount,
-    isUserRegistered
+    isUserRegistered,
+    getParticipants,
+    update,
+    softDelete,
+    unregister
 };

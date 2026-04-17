@@ -11,6 +11,10 @@ import Annuaire from './pages/Annuaire';
 import CreateAssociation from './pages/CreateAssociation';
 import AdminPanel from './pages/AdminPanel';
 import AssociationDetails from './pages/AssociationDetails';
+import Events from './pages/Events';
+import CreateEvent from './pages/CreateEvent';
+import EventParticipants from './pages/EventParticipants';
+import EventDetail from './pages/EventDetail';
 
 // --- Placeholder Pages ---
 const Home = () => (
@@ -27,8 +31,6 @@ const Home = () => (
     </div>
   </div>
 );
-
-const Events = () => <div className="animate-fade-in container mt-4"><h2>Catalogue des événements</h2><p>Bientôt disponible...</p></div>;
 
 // --- Navbar Component ---
 const Navbar = () => {
@@ -111,6 +113,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/events" element={<Events />} />
+            <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/events/:id/participants" element={<EventParticipants />} />
+            <Route path="/create-event" element={<CreateEvent />} />
             <Route path="/associations" element={<Annuaire />} />
             <Route path="/associations/:id" element={<AssociationDetails />} />
             <Route path="/create-association" element={<CreateAssociation />} />

@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
+const associationModel = require('../models/associationModel');
 const emailService = require('../utils/emailService');
 
 // Inscription
@@ -120,10 +121,16 @@ const login = async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
+        // Si responsable, on récupère son associationId
+        let associationId = null;
+        if (user.role === 'responsable') {
+            associationId = await associationModel.getUserAssociationId(user.id);
+        }
+
         res.status(200).json({
             message: 'Connexion réussie',
             token,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role }
+            user: { id: user.id, name: user.name, email: user.email, role: user.role, associationId }
         });
 
     } catch (error) {

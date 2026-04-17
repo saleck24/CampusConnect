@@ -1,48 +1,99 @@
 # CampusConnect 🎓
+> **Plateforme intégrée de gestion de la vie associative et estudiantine.**
 
-**CampusConnect** est une plateforme web moderne conçue pour dynamiser la vie estudiantine et associative. Elle permet aux étudiants de découvrir les événements du campus, de s'impliquer dans des associations et de centraliser les échanges au sein des établissements universitaires.
+CampusConnect est une solution logicielle Fullstack conçue pour répondre aux défis de visibilité et d'organisation des associations universitaires (FST). Elle centralise les flux d'informations, automatise la gestion des inscriptions et optimise la réservation des ressources communes.
 
-## 🚀 Fonctionnalités Actuelles (Sprint 1)
+---
 
-### Authentification & Sécurité
-- Inscription et signature d'e-mail pour activation.
-- Connexion sécurisée via JWT (JSON Web Token).
-- Gestion des rôles (Invité, Étudiant, Responsable, Administrateur).
+## 📂 Structure du Projet
 
-### Vie Associative
-- Annuaire public des associations validées.
-- Formulaire complet de demande de création d'association (avec upload de logo).
-- Panel d'administration pour la validation et le suivi des demandes.
+L'architecture est strictement découplée pour séparer la logique métier (Backend) de l'interface utilisateur (Frontend).
 
-## 🛠️ Stack Technique
+```text
+CampusConnect/
+├── backend/                # API REST Node.js & Express
+│   ├── config/             # Configurations (Swagger, Database)
+│   ├── controllers/        # Logique métier (Auth, Events, Assos)
+│   ├── middlewares/        # Sécurité (JWT, RBAC, Uploads)
+│   ├── models/             # Abstraction SQL (Requêtes préparées)
+│   ├── routes/             # Définition des endpoints API
+│   ├── uploads/            # Stockage local des images (logos)
+│   └── server.js           # Point d'entrée du serveur
+├── frontend/               # Interface React & Vite
+│   ├── src/
+│   │   ├── components/     # Composants UI réutilisables
+│   │   ├── context/        # État global (AuthContext)
+│   │   ├── pages/          # Vues principales (Events, Admin, Profile)
+│   │   ├── services/       # Client API (Axios instance)
+│   │   └── styles/         # Design System (Vanilla CSS)
+│   └── vite.config.js      # Configuration Proxy & Build
+└── sql/                    # Schémas et migrations de base de données
+```
 
-- **Frontend** : React.js (Vite), Lucide-React for icons, Vanilla CSS (Premium Design).
-- **Backend** : Node.js, Express.js.
-- **Base de données** : MySQL.
-- **Emailing** : Nodemailer (SMTP Gmail).
+---
 
-## 📦 Installation
+## 🛠️ Stack Technique & Justifications
 
-### Pré-requis
+- **Frontend** : `React 18` + `Vite`. Choix de la performance et d'un cycle de rendu optimisé.
+- **Backend** : `Node.js` + `Express`. Architecture asynchrone pour gérer de multiples requêtes simultanées.
+- **Base de Données** : `MySQL`. Choix de la robustesse transactionnelle pour garantir l'intégrité des inscriptions.
+- **Design** : `Vanilla CSS`. Maîtrise totale de l'UI/UX sans dépendances lourdes, garantissant une identité visuelle "Premium".
+- **Documentation** : `Swagger / OpenAPI 3.0`. Standardisation de la communication technique.
+
+---
+
+## 🚀 Fonctionnalités Clés (Basées sur le Cahier des Charges)
+
+### 🔐 Identity & Access Management (IAM)
+- **Authentification Stateless** : Sécurisée par JSON Web Tokens (JWT).
+- **RBAC (Role-Based Access Control)** : Gestion fine des droits pour 4 types d'utilisateurs (*Invité, Étudiant, Responsable, Admin*).
+- **Vérification d'identité** : Activation de compte par double opt-in email (Nodemailer).
+
+### 📅 Gestion des Événements & Ressources
+- **Algorithme d'Anti-Conflit** : Vérification en temps réel de la disponibilité des salles et des créneaux horaires lors de la création d'événements.
+- **Life-Cycle Management** : Création, modification, annulation logique et archivage automatique des événements passés.
+- **Tracking des Inscriptions** : Gestion des jauges de capacité et génération de listes de présence pour les responsables.
+
+### 🏢 Centre d'Administration
+- **Validation Asynchrone** : Circuit de validation des nouvelles associations par l'équipe CampusConnect.
+- **Gouvernance** : Outils de modération des utilisateurs et des contenus.
+
+---
+
+## 📖 Documentation API
+
+L'API est entièrement documentée et testable via l'interface interactive Swagger.
+- **URL Locale** : `http://localhost:5000/api-docs`
+
+---
+
+## 📦 Installation & Déploiement
+
+### 1. Pré-requis
 - Node.js (v20+)
-- WampServer ou MySQL (port 3306)
+- Serveur MySQL (WampServer, XAMPP ou installation native)
 
-### Lancement du Projet
+### 2. Initialisation du Backend
+```bash
+cd backend
+npm install
+# Créez votre fichier .env basé sur .env.example
+node server.js
+```
 
-1. **Base de données** : Importez le fichier `/sql/schema.sql` dans votre MySQL.
-2. **Backend** :
-   ```bash
-   cd backend
-   npm install
-   # Configurez votre .env sur le modèle de .env.example
-   node server.js
-   ```
-3. **Frontend** :
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+### 3. Initialisation du Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## 📝 Auteurs
-Projet développé dans le cadre d'un projet universitaire.
+---
+
+## 📝 Contexte du Projet
+CampusConnect a été développé dans le cadre d'un projet universitaire, en suivant strictement les pratiques et les règles du **framework agile Scrum**. Le développement a été rythmé par des itérations (Sprints) permettant d'assurer une livraison continue de valeur métier, conformément aux spécifications du cahier des charges interne.
+
+---
+
+## ⚖️ Licence & Copyright
+© 2026 CampusConnect. Développé pour la FST dans le cadre d'un audit ingénierie logicielle.

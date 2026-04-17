@@ -94,6 +94,3 @@ npm run dev
 CampusConnect a été développé dans le cadre d'un projet universitaire, en suivant strictement les pratiques et les règles du **framework agile Scrum**. Le développement a été rythmé par des itérations (Sprints) permettant d'assurer une livraison continue de valeur métier, conformément aux spécifications du cahier des charges interne.
 
 ---
-
-## ⚖️ Licence & Copyright
-© 2026 CampusConnect. Développé pour la FST dans le cadre d'un audit ingénierie logicielle.

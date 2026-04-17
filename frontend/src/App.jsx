@@ -10,6 +10,7 @@ import ConfirmEmail from './pages/ConfirmEmail';
 import Annuaire from './pages/Annuaire';
 import CreateAssociation from './pages/CreateAssociation';
 import AdminPanel from './pages/AdminPanel';
+import AssociationDetails from './pages/AssociationDetails';
 
 // --- Placeholder Pages ---
 const Home = () => (
@@ -111,6 +112,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/events" element={<Events />} />
             <Route path="/associations" element={<Annuaire />} />
+            <Route path="/associations/:id" element={<AssociationDetails />} />
             <Route path="/create-association" element={<CreateAssociation />} />
             <Route path="/admin" element={<AdminPanel />} />
             

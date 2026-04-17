@@ -42,7 +42,7 @@ const Annuaire = () => {
                         <div key={asso.id} className="card flex" style={{ flexDirection: 'column' }}>
                             {asso.logo_url && (
                                 <img 
-                                    src={`http://localhost:5000${asso.logo_url}`} 
+                                    src={asso.logo_url} 
                                     alt={`Logo ${asso.name}`} 
                                     style={{ width: '100%', height: '200px', objectFit: 'contain', marginBottom: '1rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#FAFAFA', border: '1px solid var(--color-border)' }}
                                 />

@@ -22,13 +22,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Raccourci vers les dossiers d'uploads
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes API
 const authRoutes = require('./routes/authRoutes');
 const associationRoutes = require('./routes/associationRoutes');
+const userRoutes = require('./routes/userRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/associations', associationRoutes);
+app.use('/api/users', userRoutes);
 
 // Routes de test
 app.get('/', (req, res) => {

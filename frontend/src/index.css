@@ -132,6 +132,7 @@ button {
 
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
+  color: white !important;
   box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
 }

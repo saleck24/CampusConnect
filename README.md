@@ -29,7 +29,7 @@
 
 ### Lancement du Projet
 
-1. **Base de données** : Importez le fichier `/sql/CampusConnect.sql` dans votre MySQL.
+1. **Base de données** : Importez le fichier `/sql/schema.sql` dans votre MySQL.
 2. **Backend** :
    ```bash
    cd backend

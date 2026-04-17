@@ -22,4 +22,5 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 backend/scratch/
 .notes.md
+CampusConnect_Agent_Instructions.md
 *.log

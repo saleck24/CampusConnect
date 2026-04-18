@@ -143,7 +143,7 @@ const CreateAssociation = () => {
                                 onChange={handleChange}
                                 rows="3"
                                 style={{ width: '100%', padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontFamily: 'inherit' }}
-                                placeholder="Être étudiant en L3, payer une cotisation de 500 UM, etc."
+                                placeholder="Être étudiant en L3, payer une cotisation de 500 MRU, etc."
                             ></textarea>
                         </div>
                     </div>

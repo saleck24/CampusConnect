@@ -104,7 +104,7 @@ const EventParticipants = () => {
                                                 color: p.price_applied > 0 ? '#92400E' : '#166534',
                                                 fontWeight: 600
                                             }}>
-                                                {p.price_applied > 0 ? `Payé (${p.price_applied}€)` : 'Gratuit'}
+                                                {p.price_applied > 0 ? `Payé (${p.price_applied}MRU)` : 'Gratuit'}
                                             </span>
                                         </td>
                                     </tr>

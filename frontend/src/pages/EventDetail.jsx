@@ -217,7 +217,7 @@ const EventDetail = () => {
                             <div className="flex items-center gap-3" style={{ color: 'var(--color-text-muted)' }}>
                                 <Ticket size={20} color="var(--color-warning)" />
                                 <span style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>
-                                    {event.is_paid ? `Payant — ${event.guest_price}€` : 'Gratuit'}
+                                    {event.is_paid ? `Payant — ${event.guest_price}MRU` : 'Gratuit'}
                                 </span>
                             </div>
                         </div>

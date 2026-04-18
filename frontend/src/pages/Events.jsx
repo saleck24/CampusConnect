@@ -103,7 +103,7 @@ const Events = () => {
                                     </div>
                                     <div className="flex items-center gap-3" style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
                                         <Ticket size={18} color="var(--color-accent)" />
-                                        <span>{event.is_paid ? `Payant (${event.guest_price}€)` : 'Gratuit'}</span>
+                                        <span>{event.is_paid ? `Payant (${event.guest_price}MRU)` : 'Gratuit'}</span>
                                     </div>
                                 </div>
                             </div>

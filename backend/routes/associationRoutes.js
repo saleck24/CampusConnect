@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const associationController = require('../controllers/associationController');
+const associationManagementController = require('../controllers/associationManagementController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 
@@ -110,6 +111,48 @@ router.post(
     requireAuth, 
     requireRole(['admin']), 
     associationController.handleRequest
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/members:
+ *   get:
+ *     summary: Liste des membres de l'association (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.get(
+    '/my-association/members',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.getAssociationMembers
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/members/{userId}:
+ *   delete:
+ *     summary: Révoquer un membre de l'association (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.delete(
+    '/my-association/members/:userId',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.removeMember
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/finances:
+ *   get:
+ *     summary: Journal des transactions et CA (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.get(
+    '/my-association/finances',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.getAssociationFinances
 );
 
 module.exports = router;

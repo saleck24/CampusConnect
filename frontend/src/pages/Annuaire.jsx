@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Users, Info, ArrowRight } from 'lucide-react';
+import { Users, Info, ArrowRight, Loader2, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Annuaire = () => {
     const [associations, setAssociations] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const fetchAssociations = async () => {
@@ -22,44 +23,82 @@ const Annuaire = () => {
         fetchAssociations();
     }, []);
 
+    const filteredAssociations = associations.filter(asso => 
+        asso.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     if (loading) {
-        return <div className="container mt-4 text-center">Chargement de l'annuaire...</div>;
+        return (
+            <div className="container flex justify-center items-center" style={{ minHeight: '60vh' }}>
+                <Loader2 className="animate-spin text-indigo" size={48} />
+            </div>
+        );
     }
 
     return (
-        <div className="container animate-fade-in mt-4">
-            <h2 className="mb-4" style={{ color: 'var(--color-primary)' }}>Annuaire des Associations</h2>
+        <div className="container animate-fade-in mt-4 mb-4" style={{ paddingTop: '40px' }}>
+            <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+                <div style={{ color: 'var(--indigo)', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Communauté</div>
+                <h1 style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--ff-display)', marginBottom: '24px' }}>Associations du campus</h1>
+                
+                <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
+                    <Search size={20} style={{ position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)', color: 'var(--ink3)' }} />
+                    <input 
+                        type="text" 
+                        placeholder="Rechercher un club ou une association..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '14px 20px 14px 48px',
+                            borderRadius: '16px',
+                            border: '1.5px solid var(--borderl)',
+                            background: '#fff',
+                            outline: 'none',
+                            fontSize: '15px'
+                        }}
+                    />
+                </div>
+            </div>
             
-            {associations.length === 0 ? (
-                <div className="card text-center" style={{ padding: '3rem' }}>
-                    <Info size={48} color="var(--color-text-muted)" style={{ margin: '0 auto', marginBottom: '1rem' }} />
-                    <h3 style={{ color: 'var(--color-text-main)' }}>Aucune association</h3>
-                    <p style={{ color: 'var(--color-text-muted)' }}>Il n'y a pas encore d'associations validées sur la plateforme.</p>
+            {filteredAssociations.length === 0 ? (
+                <div className="acard" style={{ padding: '80px 40px', textAlign: 'center' }}>
+                    <div style={{ width: '64px', height: '64px', background: 'var(--surf2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                        <Users size={32} color="var(--ink3)" />
+                    </div>
+                    <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Aucune association trouvée</h3>
+                    <p style={{ color: 'var(--ink3)' }}>Essayez un autre terme de recherche ou revenez plus tard.</p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                    {associations.map((asso) => (
-                        <div key={asso.id} className="card flex" style={{ flexDirection: 'column' }}>
-                            {asso.logo_url && (
-                                <img 
-                                    src={asso.logo_url} 
-                                    alt={`Logo ${asso.name}`} 
-                                    style={{ width: '100%', height: '200px', objectFit: 'contain', marginBottom: '1rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#FAFAFA', border: '1px solid var(--color-border)' }}
-                                />
-                            )}
-                            <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-text-main)' }}>{asso.name}</h3>
-                            <p style={{ color: 'var(--color-text-muted)', marginBottom: '1rem', flex: 1 }}>
-                                {asso.description && asso.description.length > 100 
-                                    ? asso.description.substring(0, 100) + '...' 
-                                    : asso.description}
-                            </p>
-                            <div className="flex justify-between items-center" style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--color-accent)', fontWeight: 600 }}>Plan {asso.plan}</span>
-                                <Link to={`/associations/${asso.id}`} className="btn btn-secondary flex items-center gap-1" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-                                    Voir plus <ArrowRight size={14} />
-                                </Link>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
+                    {filteredAssociations.map((asso) => (
+                        <Link key={asso.id} to={`/associations/${asso.id}`} style={{ textDecoration: 'none' }}>
+                            <div className="acard flex flex-column h-100">
+                                <div style={{ 
+                                    width: '64px', height: '64px', borderRadius: '16px', 
+                                    background: 'var(--indigo-light)', display: 'flex', 
+                                    alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                                    fontSize: '28px', overflow: 'hidden'
+                                }}>
+                                    {asso.logo_url ? (
+                                        <img src={asso.logo_url} alt={asso.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        '🏛️'
+                                    )}
+                                </div>
+                                <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px', color: 'var(--ink)' }}>{asso.name}</h3>
+                                <div style={{ fontSize: '12px', color: 'var(--ink3)', marginBottom: '12px' }}>{asso.plan || 'Membre'} du réseau</div>
+                                <div style={{ marginTop: 'auto' }}>
+                                    <span style={{ 
+                                        display: 'inline-block', padding: '4px 12px', 
+                                        borderRadius: 'var(--r3)', background: 'var(--indigo-light)', 
+                                        color: 'var(--indigo)', fontSize: '11px', fontWeight: 700 
+                                    }}>
+                                        Explorer <ArrowRight size={10} style={{ marginLeft: '4px' }} />
+                                    </span>
+                                </div>
                             </div>
-                        </div>
+                        </Link>
                     ))}
                 </div>
             )}

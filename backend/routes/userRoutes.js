@@ -9,7 +9,7 @@ const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
  * /api/users:
  *   get:
  *     summary: Liste complète des utilisateurs (Admin uniquement)
- *     tags: [Users]
+ *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
@@ -22,7 +22,7 @@ router.get('/', requireAuth, requireRole(['admin']), userController.getAllUsers)
  * /api/users/{id}/role:
  *   patch:
  *     summary: Changer le rôle d'un utilisateur (Admin uniquement)
- *     tags: [Users]
+ *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -48,7 +48,7 @@ router.patch('/:id/role', requireAuth, requireRole(['admin']), userController.up
  * /api/users/{id}/status:
  *   patch:
  *     summary: Activer/Désactiver un compte (Admin uniquement)
- *     tags: [Users]
+ *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path

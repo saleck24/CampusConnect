@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Calendar, MapPin, Users as UsersIcon, Ticket, ArrowRight, Info, Loader2, List } from 'lucide-react';
+import { Calendar, MapPin, Users as UsersIcon, Ticket, ArrowRight, Info, Loader2, Plus, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
@@ -8,7 +8,7 @@ const Events = () => {
     const { user } = useAuth();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [registering, setRegistering] = useState(null); // eventId being registered
+    const [registering, setRegistering] = useState(null);
 
     useEffect(() => {
         fetchEvents();
@@ -35,7 +35,6 @@ const Events = () => {
         try {
             const response = await api.post(`events/register/${eventId}`);
             alert(response.data.message);
-            // On pourrait rafraîchir ici pour mettre à jour les jauges si on avait le count actuel
         } catch (error) {
             alert(error.response?.data?.message || "Erreur lors de l'inscription");
         } finally {
@@ -46,97 +45,114 @@ const Events = () => {
     if (loading) {
         return (
             <div className="container flex justify-center items-center" style={{ minHeight: '60vh' }}>
-                <Loader2 className="animate-spin" size={48} color="var(--color-primary)" />
+                <Loader2 className="animate-spin text-indigo" size={48} />
             </div>
         );
     }
 
     return (
-        <div className="container animate-fade-in mt-4 mb-4">
-            <div className="flex justify-between items-end mb-4">
+        <div className="container animate-fade-in mt-4 mb-4" style={{ paddingTop: '40px' }}>
+            <div className="flex justify-between items-end mb-4" style={{ marginBottom: '40px' }}>
                 <div>
-                    <h2 style={{ color: 'var(--color-primary)', fontSize: '2rem' }}>Catalogue des Événements</h2>
-                    <p style={{ color: 'var(--color-text-muted)' }}>Ne manquez rien de la vie sur le campus !</p>
+                    <div style={{ color: 'var(--indigo)', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>À venir</div>
+                    <h1 style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--ff-display)' }}>Événements du campus</h1>
                 </div>
                 {user && (user.role === 'responsable' || user.role === 'admin') && (
-                    <a href="/create-event" className="btn btn-primary">Créer un événement</a>
+                    <Link to="/create-event" className="btn btn-primary" style={{ gap: '8px' }}>
+                        <Plus size={18} /> Créer un événement
+                    </Link>
                 )}
             </div>
 
             {events.length === 0 ? (
-                <div className="card text-center" style={{ padding: '4rem' }}>
-                    <Calendar size={48} color="var(--color-text-muted)" style={{ margin: '0 auto 1rem' }} />
-                    <h3>Aucun événement prévu</h3>
-                    <p>Revenez plus tard pour découvrir les prochaines activités !</p>
+                <div className="acard" style={{ padding: '80px 40px', textAlign: 'center' }}>
+                    <div style={{ width: '64px', height: '64px', background: 'var(--surf2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                        <Calendar size={32} color="var(--ink3)" />
+                    </div>
+                    <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Aucun événement prévu</h3>
+                    <p style={{ color: 'var(--ink3)' }}>Revenez plus tard pour découvrir les prochaines activités !</p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
-                    {events.map((event) => (
-                        <div key={event.id} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                            {/* Header Info */}
-                            <div style={{ padding: '1.5rem', flex: 1 }}>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span style={{ 
-                                        padding: '0.2rem 0.6rem', 
-                                        backgroundColor: 'rgba(79, 70, 229, 0.1)', 
-                                        color: 'var(--color-primary)', 
-                                        fontSize: '0.75rem', 
-                                        fontWeight: 700, 
-                                        borderRadius: '4px',
-                                        textTransform: 'uppercase'
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+                    {events.map((event) => {
+                        const eventDate = new Date(event.date);
+                        const day = eventDate.getDate();
+                        const month = eventDate.toLocaleString('fr-FR', { month: 'short' }).replace('.', '');
+                        
+                        return (
+                            <div key={event.id} className="ecard flex flex-column">
+                                {/* Visual Top */}
+                                <div style={{ 
+                                    height: '140px', 
+                                    background: event.is_paid ? 'var(--amber)' : 'var(--indigo-light)',
+                                    opacity: 0.9,
+                                    position: 'relative',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '48px'
+                                }}>
+                                    {event.is_paid ? '🏆' : '💻'}
+                                    <div style={{ 
+                                        position: 'absolute', top: '12px', left: '12px', 
+                                        background: '#fff', borderRadius: '10px', padding: '6px 10px',
+                                        textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                                     }}>
+                                        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>{day}</div>
+                                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase' }}>{month}</div>
+                                    </div>
+                                    <div style={{ 
+                                        position: 'absolute', top: '12px', right: '12px',
+                                        padding: '4px 10px', borderRadius: 'var(--r3)', fontSize: '10px', fontWeight: 700,
+                                        background: event.is_paid ? '#fef3c7' : '#d1fae5',
+                                        color: event.is_paid ? '#92400e' : '#065f46'
+                                    }}>
+                                        {event.is_paid ? `${event.guest_price} MRU` : 'Gratuit'}
+                                    </div>
+                                </div>
+
+                                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--indigo)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
                                         {event.association_name}
-                                    </span>
-                                </div>
-                                <h3 style={{ marginBottom: '1rem', height: '3rem', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                    {event.title}
-                                </h3>
-                                
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <div className="flex items-center gap-3" style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                                        <Calendar size={18} color="var(--color-secondary)" />
-                                        <span>{new Date(event.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
-                                    <div className="flex items-center gap-3" style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                                        <MapPin size={18} color="var(--color-error)" />
-                                        <span>{event.location}</span>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', lineHeight: 1.4 }}>
+                                        {event.title}
+                                    </h3>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                                        <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--ink3)' }}>
+                                            <MapPin size={14} className="text-indigo" />
+                                            <span>{event.location}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--ink3)' }}>
+                                            <Calendar size={14} className="text-indigo" />
+                                            <span>{eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3" style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                                        <Ticket size={18} color="var(--color-accent)" />
-                                        <span>{event.is_paid ? `Payant (${event.guest_price}MRU)` : 'Gratuit'}</span>
+
+                                    <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                        <button 
+                                            className="btn btn-primary" 
+                                            style={{ flex: 1, padding: '8px 16px', fontSize: '13px' }}
+                                            onClick={() => handleRegister(event.id)}
+                                            disabled={registering === event.id}
+                                        >
+                                            {registering === event.id ? 'Inscription...' : "S'inscrire"}
+                                        </button>
+                                        
+                                        <Link 
+                                            to={`/events/${event.id}`} 
+                                            className="btn btn-ghost"
+                                            style={{ padding: '8px' }}
+                                            title="Plus d'infos"
+                                        >
+                                            <ArrowRight size={18} />
+                                        </Link>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Footer / Action */}
-                            <div style={{ padding: '1.25rem', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem' }}>
-                                <button 
-                                    className="btn btn-primary" 
-                                    style={{ flex: 1 }}
-                                    onClick={() => handleRegister(event.id)}
-                                    disabled={registering === event.id}
-                                >
-                                    {registering === event.id ? 'Inscription...' : "S'inscrire"}
-                                </button>
-                                
-                                {(user?.role === 'admin' || (user?.role === 'responsable' && user?.associationId === event.association_id)) && (
-                                    <Link 
-                                        to={`/events/${event.id}/participants`} 
-                                        className="btn btn-secondary" 
-                                        style={{ padding: '0.625rem', color: 'var(--color-primary)' }} 
-                                        title="Voir les inscrits"
-                                    >
-                                        <UsersIcon size={18} />
-                                    </Link>
-                                )}
-
-                                <button className="btn btn-secondary" style={{ padding: '0.625rem' }} title="Plus d'infos"
-                                    onClick={() => window.location.href = `/events/${event.id}`}>
-                                    <Info size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

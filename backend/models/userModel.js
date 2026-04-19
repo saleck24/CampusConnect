@@ -6,11 +6,11 @@ const findByEmail = async (email) => {
     return rows[0];
 };
 
-// Créer un utilisateur (role 'invite' par defaut)
-const create = async (name, email, hashedPassword) => {
+// Créer un utilisateur
+const create = async (name, email, hashedPassword, role = 'invite') => {
     const [result] = await pool.execute(
         'INSERT INTO users (name, email, password, role, is_active) VALUES (?, ?, ?, ?, ?)',
-        [name, email, hashedPassword, 'invite', false]
+        [name, email, hashedPassword, role, false]
     );
     return result.insertId;
 };
@@ -42,6 +42,21 @@ const toggleStatus = async (id, isActive) => {
     await pool.execute('UPDATE users SET is_active = ? WHERE id = ?', [isActive, id]);
 };
 
+/**
+ * Récupérer les noms des X derniers utilisateurs pour générer des avatars
+ */
+const getRecentInitials = async (limit = 5) => {
+    const [rows] = await pool.query('SELECT name FROM users ORDER BY created_at DESC LIMIT ?', [limit]);
+    return rows.map(u => {
+        if (!u.name) return "??";
+        const parts = u.name.trim().split(' ');
+        if (parts.length > 1 && parts[0][0] && parts[1][0]) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return u.name.substring(0, 2).toUpperCase();
+    });
+};
+
 module.exports = {
     findByEmail,
     create,
@@ -49,5 +64,6 @@ module.exports = {
     findById,
     findAll,
     updateRole,
-    toggleStatus
+    toggleStatus,
+    getRecentInitials
 };

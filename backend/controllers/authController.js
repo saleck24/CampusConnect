@@ -7,7 +7,7 @@ const emailService = require('../utils/emailService');
 // Inscription
 const register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, role } = req.body;
 
         // Validation basique
         if (!name || !email || !password) {
@@ -28,7 +28,7 @@ const register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         // Créer l'utilisateur
-        const userId = await userModel.create(name, email, hashedPassword);
+        const userId = await userModel.create(name, email, hashedPassword, role);
 
         // Créer un token d'activation (valable 1h)
         const activationToken = jwt.sign({ id: userId, email: email }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -104,7 +104,13 @@ const login = async (req, res) => {
         }
 
         if (!user.is_active) {
-            return res.status(403).json({ message: 'Veuillez activer votre compte via le lien envoyé par email avant de vous connecter.' });
+            // Un utilisateur est inactif soit parce qu'il n'a pas validé son mail,
+            // soit parce qu'il a été suspendu par un admin (is_active repassé à 0).
+            // Pour plus de clarté, on pourrait vérifier s'il a déjà un rôle autre que 'invite'
+            // ou simplement donner un message plus global.
+            return res.status(403).json({ 
+                message: 'Accès restreint. Votre compte n’est pas actif ou a été suspendu par l’administration.' 
+            });
         }
 
         // Vérifier le mot de passe

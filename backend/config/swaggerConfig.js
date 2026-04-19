@@ -9,9 +9,17 @@ const options = {
       description: 'Documentation interactive de l\'API pour le projet CampusConnect. Cette interface permet de tester les endpoints de gestion des associations, utilisateurs et événements.',
       contact: {
         name: 'Support CampusConnect',
-        email: 'support@campusconnect.fr'
+        email: 'campustoconnected@gmail.com'
       },
     },
+    tags: [
+      { name: 'Auth', description: 'Gestion de l\'authentification' },
+      { name: 'Admin', description: 'Opérations réservées à l\'administrateur' },
+      { name: 'Associations', description: 'Gestion des clubs et associations' },
+      { name: 'Events', description: 'Gestion des événements du campus' },
+      { name: 'Stats', description: 'Statistiques publiques de la plateforme' },
+      { name: 'Reviews', description: 'Avis et retours d\'expérience' }
+    ],
     servers: [
       {
         url: 'http://localhost:5000',

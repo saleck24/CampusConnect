@@ -13,6 +13,29 @@ const findAll = async () => {
     return rows;
 };
 
+// US24: Récupérer les événements qui commencent dans une certaine plage d'heures
+const findEventsStartingBetween = async (hoursMin, hoursMax) => {
+    const [rows] = await pool.execute(`
+        SELECT id, title, date, location 
+        FROM events 
+        WHERE is_cancelled = FALSE 
+        AND date BETWEEN DATE_ADD(NOW(), INTERVAL ? HOUR) AND DATE_ADD(NOW(), INTERVAL ? HOUR)
+    `, [hoursMin, hoursMax]);
+    return rows;
+};
+
+// US30: Historique de participation de l'utilisateur
+const getUserHistory = async (userId) => {
+    const [rows] = await pool.execute(`
+        SELECT e.id, e.title, e.date, e.location, e.is_cancelled, r.created_at as registered_at
+        FROM registrations r
+        JOIN events e ON r.event_id = e.id
+        WHERE r.user_id = ?
+        ORDER BY e.date DESC
+    `, [userId]);
+    return rows;
+};
+
 const findById = async (id) => {
     const [rows] = await pool.execute(`
         SELECT e.*, a.name as association_name, a.logo_url as association_logo
@@ -144,5 +167,7 @@ module.exports = {
     getParticipants,
     update,
     softDelete,
-    unregister
+    unregister,
+    findEventsStartingBetween,
+    getUserHistory
 };

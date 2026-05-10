@@ -18,7 +18,8 @@ const options = {
       { name: 'Associations', description: 'Gestion des clubs et associations' },
       { name: 'Events', description: 'Gestion des événements du campus' },
       { name: 'Stats', description: 'Statistiques publiques de la plateforme' },
-      { name: 'Reviews', description: 'Avis et retours d\'expérience' }
+      { name: 'Reviews', description: 'Avis et retours d\'expérience' },
+      { name: 'Users', description: 'Gestion des profils et historiques' }
     ],
     servers: [
       {

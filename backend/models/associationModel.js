@@ -111,6 +111,18 @@ const getUserAssociationId = async (userId) => {
     return rows.length > 0 ? rows[0].association_id : null;
 };
 
+// US30: Récupérer les adhésions d'un utilisateur
+const getUserMemberships = async (userId) => {
+    const [rows] = await pool.execute(`
+        SELECT a.id, a.name, a.logo_url, am.status, am.created_at
+        FROM association_members am
+        JOIN associations a ON am.association_id = a.id
+        WHERE am.user_id = ?
+        ORDER BY am.created_at DESC
+    `, [userId]);
+    return rows;
+};
+
 module.exports = {
     create,
     getAllValidated,
@@ -118,5 +130,6 @@ module.exports = {
     getPendingRequests,
     validateAssociation,
     refuseAssociation,
-    getUserAssociationId
+    getUserAssociationId,
+    getUserMemberships
 };

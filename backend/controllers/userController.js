@@ -1,4 +1,6 @@
 const userModel = require('../models/userModel');
+const eventModel = require('../models/eventModel');
+const associationModel = require('../models/associationModel');
 
 const getAllUsers = async (req, res) => {
     try {
@@ -40,8 +42,25 @@ const toggleUserStatus = async (req, res) => {
     }
 };
 
+const getUserHistory = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const events = await eventModel.getUserHistory(userId);
+        const memberships = await associationModel.getUserMemberships(userId);
+
+        res.status(200).json({
+            events,
+            memberships
+        });
+    } catch (error) {
+        console.error('Erreur getUserHistory:', error);
+        res.status(500).json({ message: 'Erreur lors de la récupération de l\'historique.' });
+    }
+};
+
 module.exports = {
     getAllUsers,
     updateUserRole,
-    toggleUserStatus
+    toggleUserStatus,
+    getUserHistory
 };

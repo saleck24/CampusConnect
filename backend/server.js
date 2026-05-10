@@ -66,4 +66,8 @@ app.listen(PORT, () => {
     console.log(`Routes actives sous /api/...`);
     console.log(`Documentation Swagger : http://localhost:${PORT}/api-docs`);
     console.log(`=========================================`);
+    
+    // Initialisation des tâches planifiées
+    const { initCronJobs } = require('./utils/cronJobs');
+    initCronJobs();
 });

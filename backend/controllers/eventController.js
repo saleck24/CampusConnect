@@ -195,6 +195,24 @@ const updateEvent = async (req, res) => {
         }
 
         await eventModel.update(eventId, req.body);
+
+        // --- US25 : Envoi d'email de modification ---
+        const { sendEmail } = require('../utils/emailService');
+        const participants = await eventModel.getParticipants(eventId);
+        if (participants && participants.length > 0) {
+            for (const p of participants) {
+                const subject = `Modification : L'événement "${event.title}" a été mis à jour`;
+                const htmlContent = `
+                    <h2>Modification d'événement</h2>
+                    <p>Bonjour ${p.name},</p>
+                    <p>L'événement <strong>${event.title}</strong> auquel vous êtes inscrit a été modifié par l'organisateur.</p>
+                    <p>Veuillez consulter la plateforme pour voir les nouvelles informations (date, lieu, etc.).</p>
+                    <p>L'équipe CampusConnect</p>
+                `;
+                await sendEmail(p.email, subject, htmlContent);
+            }
+        }
+
         res.status(200).json({ message: 'Événement mis à jour.' });
     } catch (error) {
         console.error('Erreur updateEvent:', error);
@@ -216,6 +234,24 @@ const deleteEvent = async (req, res) => {
         }
 
         await eventModel.softDelete(eventId);
+
+        // --- US25 : Envoi d'email d'annulation ---
+        const { sendEmail } = require('../utils/emailService');
+        const participants = await eventModel.getParticipants(eventId);
+        if (participants && participants.length > 0) {
+            for (const p of participants) {
+                const subject = `ANNULATION : L'événement "${event.title}" est annulé`;
+                const htmlContent = `
+                    <h2>Annulation d'événement</h2>
+                    <p>Bonjour ${p.name},</p>
+                    <p>Nous vous informons avec regret que l'événement <strong>${event.title}</strong> a été annulé par l'organisateur.</p>
+                    <p>Si vous aviez procédé à un paiement, veuillez contacter l'association organisatrice.</p>
+                    <p>L'équipe CampusConnect</p>
+                `;
+                await sendEmail(p.email, subject, htmlContent);
+            }
+        }
+
         res.status(200).json({ message: 'Événement annulé.' });
     } catch (error) {
         console.error('Erreur deleteEvent:', error);

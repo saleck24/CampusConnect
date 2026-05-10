@@ -3,6 +3,20 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
+// Routes Étudiant / Connecté
+/**
+ * @swagger
+ * /api/users/me/history:
+ *   get:
+ *     summary: Historique complet de l'étudiant
+ *     tags: [Users]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Historique des participations et adhésions récupéré.
+ */
+router.get('/me/history', requireAuth, userController.getUserHistory);
+
 // Toutes ces routes sont réservées aux admins
 /**
  * @swagger

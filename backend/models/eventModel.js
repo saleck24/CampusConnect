@@ -154,6 +154,19 @@ const unregister = async (user_id, event_id) => {
     await pool.execute('DELETE FROM registrations WHERE user_id = ? AND event_id = ?', [user_id, event_id]);
 };
 
+// US31: Compter les événements créés ce mois-ci par une association
+const countEventsThisMonth = async (associationId) => {
+    const [rows] = await pool.execute(`
+        SELECT COUNT(*) as count 
+        FROM events 
+        WHERE association_id = ? 
+        AND MONTH(created_at) = MONTH(CURRENT_DATE()) 
+        AND YEAR(created_at) = YEAR(CURRENT_DATE())
+        AND is_cancelled = FALSE
+    `, [associationId]);
+    return rows[0].count;
+};
+
 module.exports = {
     findAll,
     findById,
@@ -169,5 +182,6 @@ module.exports = {
     softDelete,
     unregister,
     findEventsStartingBetween,
-    getUserHistory
+    getUserHistory,
+    countEventsThisMonth
 };

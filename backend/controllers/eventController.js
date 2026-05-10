@@ -72,6 +72,21 @@ const createEvent = async (req, res) => {
         // Si admin, il peut créer pour une asso spécifique passée en body (optionnel pour l'instant)
         const finalAssoId = associationId || req.body.association_id;
 
+        // --- US31 : Restrictions Plan Freemium ---
+        const association = await associationModel.getById(finalAssoId);
+        if (association && association.plan === 'free') {
+            // Règle 1 : Événements payants interdits
+            if (is_paid === true || is_paid === 'true' || is_paid === 1) {
+                return res.status(403).json({ message: 'Les événements payants sont réservés au plan Premium.' });
+            }
+            // Règle 2 : Maximum 2 événements par mois
+            const eventsCount = await eventModel.countEventsThisMonth(finalAssoId);
+            if (eventsCount >= 2) {
+                return res.status(403).json({ message: 'Limite atteinte : Le plan Gratuit autorise un maximum de 2 événements par mois.' });
+            }
+        }
+        // -----------------------------------------
+
         // 2. Vérifier les conflits de salle (US05)
         const conflict = await eventModel.checkConflict(location, date, end_date);
         if (conflict) {

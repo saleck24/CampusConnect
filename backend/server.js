@@ -36,12 +36,15 @@ const userRoutes = require('./routes/userRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const registrationRoutes = require('./routes/registrationRoutes');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/associations', associationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/registrations', registrationRoutes);
 
 // Routes de test
 app.get('/', (req, res) => {

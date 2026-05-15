@@ -7,10 +7,10 @@ const findByEmail = async (email) => {
 };
 
 // Créer un utilisateur
-const create = async (name, email, hashedPassword, role = 'invite') => {
+const create = async (name, email, phone, hashedPassword, role = 'etudiant') => {
     const [result] = await pool.execute(
-        'INSERT INTO users (name, email, password, role, is_active) VALUES (?, ?, ?, ?, ?)',
-        [name, email, hashedPassword, role, false]
+        'INSERT INTO users (name, email, phone, password, role, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+        [name, email, phone, hashedPassword, role, false]
     );
     return result.insertId;
 };
@@ -22,13 +22,13 @@ const activateUser = async (id) => {
 };
 
 const findById = async (id) => {
-     const [rows] = await pool.execute('SELECT id, name, email, role, is_active, created_at FROM users WHERE id = ?', [id]);
+     const [rows] = await pool.execute('SELECT id, name, email, phone, role, is_active, created_at FROM users WHERE id = ?', [id]);
      return rows[0];
 }
 
 // Admin : Tout lister
 const findAll = async () => {
-    const [rows] = await pool.execute('SELECT id, name, email, role, is_active, created_at FROM users ORDER BY created_at DESC');
+    const [rows] = await pool.execute('SELECT id, name, email, phone, role, is_active, created_at FROM users ORDER BY created_at DESC');
     return rows;
 };
 

@@ -6,8 +6,6 @@ const sendEmail = async (to, subject, htmlContent) => {
     const smtpPass = (process.env.SMTP_PASS || '').trim().replace(/\s/g, '');
 
     // Ce log s'affichera dans votre terminal à chaque tentative d'inscription
-    console.log(`>>> [DEBUG SMTP] Tentative avec : ${smtpUser} (MDP : ${smtpPass.length} caractères)`);
-
     const transporter = nodemailer.createTransport({
         host: (process.env.SMTP_HOST || 'smtp.gmail.com').trim(),
         port: parseInt(process.env.SMTP_PORT) || 465,

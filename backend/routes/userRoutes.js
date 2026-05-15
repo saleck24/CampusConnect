@@ -50,7 +50,7 @@ router.get('/', requireAuth, requireRole(['admin']), userController.getAllUsers)
  *           schema:
  *             type: object
  *             properties:
- *               role: { type: string, enum: [invite, etudiant, responsable, admin] }
+ *               role: { type: string, enum: [etudiant, responsable, admin] }
  *     responses:
  *       200:
  *         description: Rôle mis à jour.

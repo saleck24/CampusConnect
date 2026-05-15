@@ -38,7 +38,12 @@ const getUserHistory = async (userId) => {
 
 const findById = async (id) => {
     const [rows] = await pool.execute(`
-        SELECT e.*, a.name as association_name, a.logo_url as association_logo
+        SELECT e.*, a.name as association_name, a.logo_url as association_logo,
+        (SELECT u.phone 
+         FROM association_members am 
+         JOIN users u ON am.user_id = u.id 
+         WHERE am.association_id = a.id AND am.status = 'approved' AND u.role = 'responsable' 
+         LIMIT 1) as responsible_phone
         FROM events e
         JOIN associations a ON e.association_id = a.id
         WHERE e.id = ?
@@ -101,13 +106,22 @@ const checkConflict = async (location, start_date, end_date) => {
     return rows.length > 0 ? rows[0] : null;
 };
 
-// Inscription
-const register = async (user_id, event_id, price) => {
+// Inscription (connecté ou anonyme)
+const register = async ({ user_id, event_id, price, guest_name, guest_email }) => {
     const [result] = await pool.execute(
-        'INSERT INTO registrations (user_id, event_id, price_applied) VALUES (?, ?, ?)',
-        [user_id, event_id, price]
+        'INSERT INTO registrations (user_id, guest_name, guest_email, event_id, price_applied) VALUES (?, ?, ?, ?, ?)',
+        [user_id || null, guest_name || null, guest_email || null, event_id, price]
     );
     return result.insertId;
+};
+
+// Vérifier si un invité anonyme est déjà inscrit (par email + event)
+const isGuestRegistered = async (guest_email, event_id) => {
+    const [rows] = await pool.execute(
+        'SELECT id FROM registrations WHERE guest_email = ? AND event_id = ?',
+        [guest_email, event_id]
+    );
+    return rows.length > 0;
 };
 
 // Récupérer les participants d'un événement
@@ -183,5 +197,6 @@ module.exports = {
     unregister,
     findEventsStartingBetween,
     getUserHistory,
-    countEventsThisMonth
+    countEventsThisMonth,
+    isGuestRegistered
 };

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { User, Mail, Lock, Eye, EyeOff, CheckCircle2, GraduationCap } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, CheckCircle2, GraduationCap, Phone } from 'lucide-react';
 
 const Register = () => {
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'etudiant' });
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', role: 'etudiant' });
     const [status, setStatus] = useState({ type: '', message: '' });
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +39,7 @@ const Register = () => {
         try {
             const response = await api.post('auth/register', formData);
             setStatus({ type: 'success', message: response.data.message });
-            setFormData({ name: '', email: '', password: '', role: 'etudiant' });
+            setFormData({ name: '', email: '', phone: '', password: '', role: 'etudiant' });
             setPwStrength(0);
         } catch (error) {
             const errorMsg = error.response?.data?.message || 'Une erreur est survenue lors de l\'inscription.';
@@ -50,7 +50,6 @@ const Register = () => {
     };
 
     const roles = [
-        { id: 'invite', label: 'Invité', icon: '👤' },
         { id: 'etudiant', label: 'Étudiant', icon: '🎓' },
         { id: 'responsable', label: 'Responsable', icon: '🏛️' }
     ];
@@ -191,6 +190,22 @@ const Register = () => {
                                         className="form-input"
                                         placeholder="votre.nom@campus.fr"
                                         value={formData.email}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Numéro de téléphone</label>
+                                <div className="form-input-container">
+                                    <Phone size={18} className="form-icon" />
+                                    <input 
+                                        type="tel"
+                                        name="phone"
+                                        className="form-input"
+                                        placeholder="+222 XX XX XX XX"
+                                        value={formData.phone}
                                         onChange={handleChange}
                                         required
                                     />

@@ -7,11 +7,11 @@ const emailService = require('../utils/emailService');
 // Inscription
 const register = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, phone, password, role } = req.body;
 
         // Validation basique
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: 'Tous les champs sont requis.' });
+        if (!name || !email || !phone || !password) {
+            return res.status(400).json({ message: 'Tous les champs sont requis, y compris le numéro de téléphone.' });
         }
         if (password.length < 8) {
             return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères.' });
@@ -28,7 +28,7 @@ const register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         // Créer l'utilisateur
-        const userId = await userModel.create(name, email, hashedPassword, role);
+        const userId = await userModel.create(name, email, phone, hashedPassword, role);
 
         // Créer un token d'activation (valable 1h)
         const activationToken = jwt.sign({ id: userId, email: email }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -106,7 +106,7 @@ const login = async (req, res) => {
         if (!user.is_active) {
             // Un utilisateur est inactif soit parce qu'il n'a pas validé son mail,
             // soit parce qu'il a été suspendu par un admin (is_active repassé à 0).
-            // Pour plus de clarté, on pourrait vérifier s'il a déjà un rôle autre que 'invite'
+            // Pour plus de clarté, on pourrait vérifier s'il a déjà validé son mail
             // ou simplement donner un message plus global.
             return res.status(403).json({ 
                 message: 'Accès restreint. Votre compte n’est pas actif ou a été suspendu par l’administration.' 

@@ -1,13 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Building2, Target, ClipboardList, ArrowLeft, Loader2, AlertCircle, Info } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Building2, Target, ClipboardList, ArrowLeft, Loader2, AlertCircle, Info, CheckCircle } from 'lucide-react';
 
 const AssociationDetails = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const [association, setAssociation] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [joinSuccess, setJoinSuccess] = useState(false);
+    const [joinError, setJoinError] = useState('');
+    const [joinLoading, setJoinLoading] = useState(false);
+
+    const handleJoin = async () => {
+        if (!user) return navigate('/login');
+        setJoinLoading(true);
+        setJoinError('');
+        try {
+            await api.post(`associations/${id}/join`);
+            setJoinSuccess(true);
+        } catch (err) {
+            setJoinError(err.response?.data?.message || 'Erreur lors de la demande d\'adhésion.');
+        } finally {
+            setJoinLoading(false);
+        }
+    };
 
     useEffect(() => {
         const fetchDetail = async () => {
@@ -127,9 +147,36 @@ const AssociationDetails = () => {
                         </div>
                     </div>
 
-                    <div className="mt-4 flex justify-end">
-                        <button className="btn btn-primary" onClick={() => alert("Fonctionnalité d'adhésion bientôt disponible !")}>
-                            Devenir Membre
+                    {joinSuccess && (
+                        <div style={{ 
+                            position: 'fixed', 
+                            bottom: '30px', 
+                            right: '30px', 
+                            zIndex: 9999, 
+                            backgroundColor: '#DEF7EC', 
+                            border: '1px solid #31C48D', 
+                            color: '#03543F', 
+                            padding: '1rem 1.5rem', 
+                            borderRadius: '8px', 
+                            boxShadow: '0 10px 15px rgba(0,0,0,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            animation: 'fadeIn 0.3s ease-out'
+                        }}>
+                            <CheckCircle size={28} />
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Félicitations !</h4>
+                                <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.9 }}>Votre demande d'adhésion a bien été envoyée.</p>
+                            </div>
+                            <button onClick={() => setJoinSuccess(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#03543F', marginLeft: '1rem' }}>&times;</button>
+                        </div>
+                    )}
+
+                    <div className="mt-4 flex flex-col items-end gap-2">
+                        {joinError && <p style={{ color: 'var(--color-error)', margin: 0 }}>{joinError}</p>}
+                        <button className="btn btn-primary" onClick={handleJoin} disabled={joinLoading || !user || joinSuccess}>
+                            {joinLoading ? 'Envoi en cours...' : (!user ? 'Connectez-vous pour adhérer' : (joinSuccess ? 'Demande envoyée' : 'Devenir Membre'))}
                         </button>
                     </div>
                 </div>

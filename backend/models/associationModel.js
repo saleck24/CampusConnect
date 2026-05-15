@@ -58,6 +58,21 @@ const getById = async (id) => {
 
 // --- Côté Admin ---
 
+// Rejoindre une association
+const requestMembership = async (userId, associationId) => {
+    const [existing] = await pool.execute(
+        'SELECT id FROM association_members WHERE user_id = ? AND association_id = ?',
+        [userId, associationId]
+    );
+    if (existing.length > 0) return false;
+
+    const [result] = await pool.execute(
+        'INSERT INTO association_members (user_id, association_id, status) VALUES (?, ?, ?)',
+        [userId, associationId, 'pending']
+    );
+    return result.insertId;
+};
+
 // Lister toutes les demandes non validées
 const getPendingRequests = async () => {
     const [rows] = await pool.execute(`
@@ -83,7 +98,7 @@ const validateAssociation = async (associationId, userIdToPromote, membershipId)
         await connection.execute('UPDATE association_members SET status = "approved" WHERE id = ?', [membershipId]);
 
         // 3. Promouvoir le rôle de l'utilisateur à 'responsable' si ce n'est pas déjà le cas
-        await connection.execute('UPDATE users SET role = "responsable" WHERE id = ? AND role IN ("invite", "etudiant")', [userIdToPromote]);
+        await connection.execute('UPDATE users SET role = "responsable" WHERE id = ? AND role = "etudiant"', [userIdToPromote]);
 
         await connection.commit();
         return true;
@@ -131,5 +146,6 @@ module.exports = {
     validateAssociation,
     refuseAssociation,
     getUserAssociationId,
+    requestMembership,
     getUserMemberships
 };

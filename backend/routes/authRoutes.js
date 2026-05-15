@@ -18,8 +18,9 @@ const authController = require('../controllers/authController');
  *             properties:
  *               name: { type: string }
  *               email: { type: string }
+ *               phone: { type: string }
  *               password: { type: string }
- *               role: { type: string, enum: [invite, etudiant, responsable], default: invite }
+ *               role: { type: string, enum: [etudiant, responsable], default: etudiant }
  *     responses:
  *       201:
  *         description: Utilisateur créé, email de confirmation envoyé.

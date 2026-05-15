@@ -19,6 +19,11 @@ const EventDetail = () => {
     const [isRegistered, setIsRegistered] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
 
+    // Guest registration state
+    const [guestName, setGuestName] = useState('');
+    const [guestEmail, setGuestEmail] = useState('');
+    const [guestSuccess, setGuestSuccess] = useState('');
+
     // Edit mode state
     const [editing, setEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
@@ -43,12 +48,46 @@ const EventDetail = () => {
         }
     };
 
-    const handleRegister = async () => {
-        if (!user) return navigate('/login');
+    const handleRegister = async (e) => {
+        if (e) e.preventDefault();
         setActionLoading(true);
+        setError(null);
+        setGuestSuccess('');
+        
         try {
-            await api.post(`events/register/${id}`);
-            setIsRegistered(true);
+            const payload = user ? {} : { guest_name: guestName, guest_email: guestEmail };
+            const response = await api.post(`events/register/${id}`, payload);
+            
+            // Si l'événement est payant, on prépare la redirection WhatsApp
+            if (event.is_paid && event.responsible_phone) {
+                const participantName = user ? user.name : guestName;
+                const formattedDate = new Date(event.date).toLocaleDateString('fr-FR', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                });
+                const tDebut = new Date(event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const tFin = new Date(event.end_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                
+                const message = `Bonjour, je m'appelle ${participantName}, je souhaite m'inscrire à l'événement "${event.title}" de ${tDebut} à ${tFin} le ${formattedDate} à ${event.location}. Voici ma preuve de paiement.`;
+                
+                // Nettoyage du numéro (garder seulement les chiffres)
+                const cleanPhone = event.responsible_phone.replace(/\D/g, '');
+                const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+                
+                // Petite pause pour laisser l'utilisateur voir le succès avant redirection
+                setTimeout(() => {
+                    window.open(waUrl, '_blank');
+                }, 1000);
+            }
+
+            if (user) {
+                setIsRegistered(true);
+            } else {
+                setGuestSuccess(event.is_paid 
+                    ? "Inscription enregistrée ! Redirection vers WhatsApp pour envoyer votre preuve de virement..." 
+                    : "Inscription réussie ! Vous allez recevoir un email de confirmation.");
+                setGuestName('');
+                setGuestEmail('');
+            }
             setRegistrationCount(c => c + 1);
         } catch (err) {
             alert(err.response?.data?.message || "Erreur lors de l'inscription.");
@@ -242,18 +281,85 @@ const EventDetail = () => {
                                     </button>
                                 </div>
                             ) : (
-                                <button onClick={handleRegister} disabled={actionLoading || spotsLeft === 0} className="btn btn-primary" style={{ width: '100%', padding: '0.875rem' }}>
-                                    <UserPlus size={18} style={{ marginRight: '8px' }} />
-                                    {spotsLeft === 0 ? 'Événement complet' : (actionLoading ? 'Inscription...' : "S'inscrire à cet événement")}
+                                <button 
+                                    onClick={handleRegister} 
+                                    disabled={actionLoading || spotsLeft === 0} 
+                                    className="btn" 
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '0.875rem',
+                                        backgroundColor: event.is_paid ? '#25D366' : 'var(--color-primary)',
+                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px'
+                                    }}
+                                >
+                                    <UserPlus size={18} />
+                                    {spotsLeft === 0 ? 'Événement complet' : (
+                                        actionLoading ? 'Inscription...' : (
+                                            event.is_paid ? 'Payer & S\'inscrire via WhatsApp' : "S'inscrire à cet événement"
+                                        )
+                                    )}
                                 </button>
                             )}
                         </div>
                     )}
 
                     {!user && (
-                        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem', textAlign: 'center' }}>
-                            <p style={{ color: 'var(--color-text-muted)', marginBottom: '1rem' }}>Connectez-vous pour vous inscrire.</p>
-                            <Link to="/login" className="btn btn-primary">Se connecter</Link>
+                        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
+                            <h4 style={{ marginBottom: '1rem' }}>S'inscrire en tant qu'invité</h4>
+                            {guestSuccess ? (
+                                <div className="flex items-center gap-2" style={{ color: 'var(--color-accent)', fontWeight: 600, marginBottom: '1rem' }}>
+                                    <CheckCircle size={20} /> {guestSuccess}
+                                </div>
+                            ) : (
+                                <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Votre nom complet" 
+                                        required 
+                                        value={guestName} 
+                                        onChange={e => setGuestName(e.target.value)}
+                                        style={{ padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                                    />
+                                    <input 
+                                        type="email" 
+                                        placeholder="Votre adresse email" 
+                                        required 
+                                        value={guestEmail} 
+                                        onChange={e => setGuestEmail(e.target.value)}
+                                        style={{ padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                                    />
+                                    <button 
+                                        type="submit" 
+                                        disabled={actionLoading || spotsLeft === 0} 
+                                        className="btn" 
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '0.875rem',
+                                            backgroundColor: event.is_paid ? '#25D366' : 'var(--color-primary)',
+                                            color: '#fff',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '10px'
+                                        }}
+                                    >
+                                        <UserPlus size={18} />
+                                        {spotsLeft === 0 ? 'Événement complet' : (
+                                            actionLoading ? 'Inscription...' : (
+                                                event.is_paid ? 'Payer via WhatsApp' : "S'inscrire (Tarif invité)"
+                                            )
+                                        )}
+                                    </button>
+                                </form>
+                            )}
+                            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                                <p style={{ color: 'var(--color-text-muted)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Vous êtes déjà membre ?</p>
+                                <Link to="/login" className="btn btn-secondary" style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>Se connecter</Link>
+                            </div>
                         </div>
                     )}
                 </div>

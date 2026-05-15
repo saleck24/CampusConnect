@@ -270,7 +270,6 @@ const AdminPanel = () => {
                                                             background: 'var(--surf2)', color: 'var(--ink)'
                                                         }}
                                                     >
-                                                        <option value="invite">Invité</option>
                                                         <option value="etudiant">Étudiant</option>
                                                         <option value="responsable">Responsable</option>
                                                         <option value="admin">Admin</option>

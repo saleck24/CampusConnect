@@ -126,10 +126,28 @@ const handleRequest = async (req, res) => {
     }
 }
 
+// Demande d'adhésion par un étudiant
+const requestMembership = async (req, res) => {
+    try {
+        const associationId = req.params.id;
+        const userId = req.user.id;
+
+        const success = await associationModel.requestMembership(userId, associationId);
+        if (!success) {
+            return res.status(400).json({ message: 'Vous avez déjà envoyé une demande ou vous êtes déjà membre.' });
+        }
+        res.status(201).json({ message: 'Demande d\'adhésion envoyée avec succès !' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur lors de la demande d\'adhésion.' });
+    }
+};
+
 module.exports = {
     getPublicAssociations,
     getAssociationDetail,
     createAssociationRequest,
     getPendingRequests,
-    handleRequest
+    handleRequest,
+    requestMembership
 };

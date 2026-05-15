@@ -116,34 +116,65 @@ const createEvent = async (req, res) => {
     }
 };
 
-// Inscription à un événement (Étudiant/Responsable/Admin connecté)
+// Inscription à un événement — connecté OU visiteur anonyme
 const registerToEvent = async (req, res) => {
     try {
         const eventId = req.params.id;
-        const userId = req.user.id;
 
         const event = await eventModel.findById(eventId);
         if (!event) {
             return res.status(404).json({ message: 'Événement introuvable.' });
         }
 
-        // 1. Vérifier si déjà inscrit
-        const alreadyRegistered = await eventModel.isUserRegistered(userId, eventId);
-        if (alreadyRegistered) {
-            return res.status(400).json({ message: 'Vous êtes déjà inscrit à cet événement.' });
-        }
-
-        // 2. Vérifier la capacité (US04)
+        // 1. Vérifier la capacité
         const currentRegistrations = await eventModel.getRegistrationCount(eventId);
         if (event.max_participants && currentRegistrations >= event.max_participants) {
             return res.status(400).json({ message: 'Désolé, cet événement est complet.' });
         }
 
-        // 3. Procéder à l'inscription (Logique gratuite pour l'instant)
-        // Note: Si c'est payant, ici on devrait gérer l'état 'pending' du paiement
-        await eventModel.register(userId, eventId, event.is_paid ? event.guest_price : 0);
+        // -----------------------------------------------
+        // CAS A : Utilisateur connecté (JWT valide)
+        // -----------------------------------------------
+        if (req.user) {
+            const userId = req.user.id;
 
-        res.status(201).json({ message: 'Inscription réussie !' });
+            const alreadyRegistered = await eventModel.isUserRegistered(userId, eventId);
+            if (alreadyRegistered) {
+                return res.status(400).json({ message: 'Vous êtes déjà inscrit à cet événement.' });
+            }
+
+            // Tarif : membre de l'association → member_price, sinon guest_price
+            const associationId = await associationModel.getUserAssociationId(userId);
+            const isMember = associationId && Number(associationId) === Number(event.association_id);
+            const price = event.is_paid
+                ? (isMember ? event.member_price : event.guest_price)
+                : 0;
+
+            await eventModel.register({ user_id: userId, event_id: eventId, price });
+            return res.status(201).json({ message: 'Inscription réussie !' });
+        }
+
+        // -----------------------------------------------
+        // CAS B : Visiteur anonyme (sans compte)
+        // -----------------------------------------------
+        const { guest_name, guest_email } = req.body;
+
+        if (!guest_name || !guest_email) {
+            return res.status(400).json({ message: 'Les champs guest_name et guest_email sont requis pour s\'inscrire sans compte.' });
+        }
+
+        // Vérifier double inscription par email
+        const alreadyGuestRegistered = await eventModel.isGuestRegistered(guest_email, eventId);
+        if (alreadyGuestRegistered) {
+            return res.status(400).json({ message: 'Cette adresse email est déjà inscrite à cet événement.' });
+        }
+
+        // Un visiteur paie toujours le tarif invité (guest_price)
+        const price = event.is_paid ? event.guest_price : 0;
+
+        await eventModel.register({ user_id: null, event_id: eventId, price, guest_name, guest_email });
+        return res.status(201).json({ message: 'Inscription réussie en tant qu\'invité !' });
+
     } catch (error) {
         console.error('Erreur registerToEvent:', error);
         res.status(500).json({ message: 'Erreur lors de l\'inscription.' });

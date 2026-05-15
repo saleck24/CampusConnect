@@ -88,8 +88,29 @@ const getAssociationFinances = async (req, res) => {
     }
 };
 
+/**
+ * Récupère les détails de l'association du responsable connecté
+ */
+const getMyAssociationDetail = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const associationId = await associationModel.getUserAssociationId(userId);
+
+        if (!associationId) {
+            return res.status(403).json({ message: 'Vous ne gérez aucune association.' });
+        }
+
+        const association = await associationModel.getById(associationId);
+        res.status(200).json(association);
+    } catch (error) {
+        console.error('Erreur getMyAssociationDetail:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+};
+
 module.exports = {
     getAssociationMembers,
     removeMember,
-    getAssociationFinances
+    getAssociationFinances,
+    getMyAssociationDetail
 };

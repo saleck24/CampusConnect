@@ -26,7 +26,25 @@ const requireRole = (roles) => {
     }
 }
 
+// Middleware optionnel : peuple req.user si token valide, sinon continue sans erreur
+const optionalAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = decoded;
+        } catch (e) {
+            req.user = null; // Token invalide/expiré → on ignore sans erreur
+        }
+    } else {
+        req.user = null;
+    }
+    next();
+};
+
 module.exports = {
     requireAuth,
-    requireRole
+    requireRole,
+    optionalAuth
 };

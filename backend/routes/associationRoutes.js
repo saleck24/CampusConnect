@@ -38,6 +38,26 @@ router.get('/:id', associationController.getAssociationDetail);
 
 /**
  * @swagger
+ * /api/associations/{id}/join:
+ *   post:
+ *     summary: Demander à rejoindre une association
+ *     tags: [Associations]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       201:
+ *         description: Demande envoyée.
+ *       400:
+ *         description: Déjà membre ou demande en cours.
+ */
+router.post('/:id/join', requireAuth, associationController.requestMembership);
+
+/**
+ * @swagger
  * /api/associations/request:
  *   post:
  *     summary: Faire une demande de création d'association
@@ -111,6 +131,20 @@ router.post(
     requireAuth, 
     requireRole(['admin']), 
     associationController.handleRequest
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association:
+ *   get:
+ *     summary: Détails de l'association gérée (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.get(
+    '/my-association',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.getMyAssociationDetail
 );
 
 /**

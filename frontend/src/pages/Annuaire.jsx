@@ -73,7 +73,7 @@ const Annuaire = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
                     {filteredAssociations.map((asso) => (
                         <Link key={asso.id} to={`/associations/${asso.id}`} style={{ textDecoration: 'none' }}>
-                            <div className="acard flex flex-column h-100">
+                            <div className="acard" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: '100%', padding: '20px' }}>
                                 <div style={{ 
                                     width: '64px', height: '64px', borderRadius: '16px', 
                                     background: 'var(--indigo-light)', display: 'flex', 
@@ -87,7 +87,20 @@ const Annuaire = () => {
                                     )}
                                 </div>
                                 <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px', color: 'var(--ink)' }}>{asso.name}</h3>
-                                <div style={{ fontSize: '12px', color: 'var(--ink3)', marginBottom: '12px' }}>{asso.plan || 'Membre'} du réseau</div>
+                                <div style={{ marginBottom: '12px' }}>
+                                    <span style={{ 
+                                        display: 'inline-block',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        backgroundColor: asso.plan === 'premium' ? 'rgba(245, 158, 11, 0.15)' : 'var(--surf2)',
+                                        color: asso.plan === 'premium' ? '#d97706' : 'var(--ink3)',
+                                        textTransform: 'capitalize'
+                                    }}>
+                                        Plan {asso.plan || 'Standard'}
+                                    </span>
+                                </div>
                                 <div style={{ marginTop: 'auto' }}>
                                     <span style={{ 
                                         display: 'inline-block', padding: '4px 12px', 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/eventController');
-const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
+const { requireAuth, requireRole, optionalAuth } = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -86,21 +86,34 @@ router.post('/create', requireAuth, requireRole(['responsable', 'admin']), event
  * @swagger
  * /api/events/register/{id}:
  *   post:
- *     summary: S'inscrire à un événement
+ *     summary: S'inscrire à un événement (Connecté ou Anonyme)
  *     tags: [Events]
- *     security: [{ bearerAuth: [] }]
+ *     security: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema: { type: integer }
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               guest_name: 
+ *                 type: string
+ *                 description: Requis si visiteur non connecté
+ *               guest_email: 
+ *                 type: string
+ *                 description: Requis si visiteur non connecté
  *     responses:
  *       201:
  *         description: Inscription réussie.
  *       400:
  *         description: Complet ou déjà inscrit.
  */
-router.post('/register/:id', requireAuth, eventController.registerToEvent);
+router.post('/register/:id', optionalAuth, eventController.registerToEvent);
 
 /**
  * @swagger

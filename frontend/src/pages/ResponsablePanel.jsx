@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
     Calendar, Users, Wallet, Trash2, Edit, Plus, 
-    ArrowUpRight, Clock, CheckCircle, AlertCircle, Mail, UserMinus
+    ArrowUpRight, Clock, CheckCircle, AlertCircle, Mail, UserMinus, Phone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -12,11 +12,25 @@ const ResponsablePanel = () => {
     const [members, setMembers] = useState([]);
     const [finances, setFinances] = useState({ transactions: [], totalRevenue: 0 });
     const [loading, setLoading] = useState(true);
+    const [association, setAssociation] = useState(null);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
+
+    useEffect(() => {
+        loadAssociation();
+    }, []);
 
     useEffect(() => {
         loadData();
     }, [activeTab]);
+
+    const loadAssociation = async () => {
+        try {
+            const res = await api.get('associations/my-association');
+            setAssociation(res.data);
+        } catch (error) {
+            console.error('Erreur chargement association:', error);
+        }
+    };
 
     const loadData = async () => {
         setLoading(true);
@@ -72,13 +86,48 @@ const ResponsablePanel = () => {
                     </h1>
                     <p style={{ color: 'var(--ink3)', fontWeight: '500' }}>
                         Pilotez vos événements, vos membres et votre trésorerie.
+                        {association && (
+                            <span style={{ 
+                                marginLeft: '12px', 
+                                padding: '4px 10px', 
+                                borderRadius: '8px', 
+                                fontSize: '12px', 
+                                fontWeight: '800',
+                                backgroundColor: association.plan === 'premium' ? 'var(--indigo-light)' : 'var(--surf3)',
+                                color: association.plan === 'premium' ? 'var(--indigo)' : 'var(--ink3)',
+                                border: '1px solid currentColor'
+                            }}>
+                                PLAN {association.plan?.toUpperCase()}
+                            </span>
+                        )}
                     </p>
                 </div>
-                {activeTab === 'events' && (
-                    <Link to="/create-event" className="btn btn-primary flex items-center gap-2">
-                        <Plus size={18} /> Nouvel Événement
-                    </Link>
-                )}
+                <div className="flex gap-3">
+                    {association && association.plan === 'free' && (
+                        <button 
+                            onClick={() => {
+                                const msg = `Bonjour, je m'appelle ${localStorage.getItem('userName') || 'le responsable'}, mon association "${association.name}" souhaite passer au plan premium.`;
+                                window.open(`https://wa.me/22243455259?text=${encodeURIComponent(msg)}`, '_blank');
+                            }}
+                            className="btn"
+                            style={{ 
+                                backgroundColor: '#25D366', 
+                                color: '#fff', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px',
+                                fontWeight: '700'
+                            }}
+                        >
+                            <Phone size={18} /> Passer Premium
+                        </button>
+                    )}
+                    {activeTab === 'events' && (
+                        <Link to="/create-event" className="btn btn-primary flex items-center gap-2">
+                            <Plus size={18} /> Nouvel Événement
+                        </Link>
+                    )}
+                </div>
             </div>
 
             {/* Premium Tabs */}

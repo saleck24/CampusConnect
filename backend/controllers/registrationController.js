@@ -3,28 +3,6 @@ const commissionModel = require('../models/commissionModel');
 const associationModel = require('../models/associationModel');
 const { sendEmail } = require('../utils/emailService');
 
-// US26: Upload preuve de paiement (Scénario B MVP)
-const uploadPaymentProof = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { payment_proof_url } = req.body;
-        
-        const [result] = await pool.execute(
-            'UPDATE registrations SET payment_proof_url = ?, payment_status = "pending" WHERE id = ? AND user_id = ?',
-            [payment_proof_url, id, req.user.id]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Inscription introuvable ou non autorisée.' });
-        }
-
-        res.status(200).json({ message: 'Preuve de paiement envoyée avec succès.' });
-    } catch (error) {
-        console.error('Erreur uploadPaymentProof:', error);
-        res.status(500).json({ message: 'Erreur lors de l\'upload de la preuve.' });
-    }
-};
-
 // US27 & US32: Validation manuelle + Génération de commission
 const validatePayment = async (req, res) => {
     try {

@@ -29,4 +29,23 @@ const { requireAuth } = require('../middlewares/authMiddleware');
  */
 router.post('/', requireAuth, reviewController.submitReview);
 
+/**
+ * @swagger
+ * /api/reviews/recent:
+ *   get:
+ *     summary: Récupère les avis récents
+ *     tags: [Reviews]
+ */
+router.get('/recent', reviewController.getRecentReviews);
+
+/**
+ * @swagger
+ * /api/reviews/can-review:
+ *   get:
+ *     summary: Vérifie si l'utilisateur courant peut laisser un avis
+ *     tags: [Reviews]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.get('/can-review', requireAuth, reviewController.checkCanReview);
+
 module.exports = router;

@@ -107,10 +107,13 @@ const checkConflict = async (location, start_date, end_date) => {
 };
 
 // Inscription (connecté ou anonyme)
-const register = async ({ user_id, event_id, price, guest_name, guest_email }) => {
+const register = async ({ user_id, event_id, price, guest_name, guest_email, guest_phone }) => {
+    // Si le prix est > 0 → EN_ATTENTE (en attente de validation du paiement par le responsable)
+    // Sinon → GRATUIT (événement gratuit, pas besoin de validation de paiement)
+    const paymentStatus = price > 0 ? 'EN_ATTENTE' : 'GRATUIT';
     const [result] = await pool.execute(
-        'INSERT INTO registrations (user_id, guest_name, guest_email, event_id, price_applied) VALUES (?, ?, ?, ?, ?)',
-        [user_id || null, guest_name || null, guest_email || null, event_id, price]
+        'INSERT INTO registrations (user_id, guest_name, guest_email, guest_phone, event_id, price_applied, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [user_id || null, guest_name || null, guest_email || null, guest_phone || null, event_id, price, paymentStatus]
     );
     return result.insertId;
 };
@@ -127,9 +130,16 @@ const isGuestRegistered = async (guest_email, event_id) => {
 // Récupérer les participants d'un événement
 const getParticipants = async (eventId) => {
     const [rows] = await pool.execute(`
-        SELECT u.id, u.name, u.email, r.created_at as registered_at, r.price_applied
+        SELECT 
+            COALESCE(u.id, 0) as id,
+            COALESCE(u.name, r.guest_name) as name,
+            COALESCE(u.email, r.guest_email) as email,
+            COALESCE(u.phone, r.guest_phone) as phone,
+            r.created_at as registered_at, 
+            r.price_applied,
+            r.payment_status
         FROM registrations r
-        JOIN users u ON r.user_id = u.id
+        LEFT JOIN users u ON r.user_id = u.id
         WHERE r.event_id = ?
         ORDER BY r.created_at DESC
     `, [eventId]);
@@ -153,11 +163,23 @@ const isUserRegistered = async (user_id, event_id) => {
 };
 
 const update = async (id, fields) => {
-    const { title, description, date, end_date, location, max_participants, is_paid, guest_price, member_price } = fields;
+    const allowedFields = ['title', 'description', 'date', 'end_date', 'location', 'max_participants', 'is_paid', 'guest_price', 'member_price'];
+    const updates = [];
+    const values = [];
+
+    for (const key of allowedFields) {
+        if (fields[key] !== undefined) {
+            updates.push(`${key} = ?`);
+            values.push(fields[key]);
+        }
+    }
+
+    if (updates.length === 0) return;
+
+    values.push(id);
     await pool.execute(`
-        UPDATE events SET title=?, description=?, date=?, end_date=?, location=?, 
-        max_participants=?, is_paid=?, guest_price=?, member_price=? WHERE id=?
-    `, [title, description, date, end_date, location, max_participants, is_paid, guest_price, member_price, id]);
+        UPDATE events SET ${updates.join(', ')} WHERE id = ?
+    `, values);
 };
 
 const softDelete = async (id) => {

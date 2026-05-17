@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const statsController = require('../controllers/statsController');
+const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -25,5 +26,15 @@ const statsController = require('../controllers/statsController');
  *         description: Erreur serveur.
  */
 router.get('/public', statsController.getPublicStats);
+
+/**
+ * @swagger
+ * /api/stats/admin/finances:
+ *   get:
+ *     summary: Récupérer les finances globales de la plateforme (Admin)
+ *     tags: [Stats]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.get('/admin/finances', requireAuth, requireRole(['admin']), statsController.getAdminFinances);
 
 module.exports = router;

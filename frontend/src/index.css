@@ -1,25 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Premium Palette - Refined */
-  --ink: #0F172A;
+  /* Premium Palette - Startup Style */
+  --ink: #020617;
   --ink2: #334155;
   --ink3: #64748B;
-  --surface: #F8FAFC; /* Légèrement grisé pour faire ressortir les cartes */
-  --surf2: #FFFFFF;    /* Blanc pur pour les cartes et composants */
+  --surface: #F4F7F9; /* Doux, gris bleuté */
+  --surf2: #FFFFFF;    
   --surf3: #F1F5F9;
   --indigo: #4F46E5;
-  --indigo2: #6366F1;
+  --indigo2: #4338CA;
   --indigo-light: #EEF2FF;
-  --rose: #F43F5E;
-  --teal: #10B981;
-  --amber: #F59E0B;
-  --border: rgba(79, 70, 229, 0.1);
+  --rose: #E11D48;
+  --teal: #059669;
+  --amber: #D97706;
+  --amber-light: #FEF3C7;
+  --teal-light: #D1FAE5;
+  --rose-light: #FFE4E6;
+  --border: rgba(79, 70, 229, 0.15);
   --borderl: #E2E8F0;
   
   /* Radii */
-  --r: 12px;
-  --r2: 8px;
+  --r: 16px;
+  --r2: 12px;
   --r3: 999px;
   
   /* Typography */
@@ -33,6 +36,11 @@
   --color-text-main: var(--ink);
   --color-text-muted: var(--ink3);
   --color-border: var(--borderl);
+  --color-success: var(--teal);
+  --color-error: var(--rose);
+  --color-secondary: var(--teal);
+  --color-accent: var(--indigo);
+  --color-warning: var(--amber);
 }
 
 * {
@@ -90,14 +98,14 @@ h1, h2, h3, h4, .font-display {
 }
 
 .btn-primary {
-  background: var(--indigo);
+  background: linear-gradient(135deg, var(--indigo) 0%, var(--indigo2) 100%);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
 
 .btn-primary:hover {
-  background: var(--indigo2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3);
 }
 
 .btn-ghost {
@@ -111,6 +119,13 @@ h1, h2, h3, h4, .font-display {
   border-color: var(--ink3);
 }
 
+.btn-logout:hover {
+  background: var(--rose) !important;
+  color: #fff !important;
+  border-color: var(--rose) !important;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2);
+}
+
 .btn-secondary {
   background: var(--surf2);
   border-color: var(--borderl);
@@ -121,19 +136,35 @@ h1, h2, h3, h4, .font-display {
   background: var(--surf3);
 }
 
+.btn-danger {
+  background: var(--rose);
+  border-color: var(--rose);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2);
+}
+
+.btn-danger:hover {
+  background: #be123c;
+  border-color: #be123c;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(225, 29, 72, 0.3);
+}
+
 /* ── CARDS ── */
 .ecard {
   border: 1px solid var(--borderl);
   border-radius: var(--r);
   overflow: hidden;
-  transition: 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: #fff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .ecard:hover {
-  border-color: var(--indigo2);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.05);
+  border-color: var(--border);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
 .acard {
@@ -249,6 +280,83 @@ h1, h2, h3, h4, .font-display {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* ── JOYFUL & MODERN TABLE STYLE ── */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+thead tr {
+  background: linear-gradient(135deg, var(--indigo-light) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
+}
+
+thead th {
+  color: var(--indigo) !important;
+  font-family: var(--ff-display) !important;
+  font-weight: 800 !important;
+  border-bottom: 2.5px solid rgba(79, 70, 229, 0.25) !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Subtle, joyful brand colors for vertical column separators and rows */
+th, td {
+  border-right: 1.5px solid rgba(79, 70, 229, 0.12) !important;
+  border-bottom: 1.5px solid rgba(79, 70, 229, 0.08) !important;
+}
+
+th:last-child, td:last-child {
+  border-right: none !important;
+}
+
+/* Alternate row styling with extremely light primary color tint for joyfulness */
+tbody tr:nth-child(even) {
+  background-color: rgba(99, 102, 241, 0.02) !important;
+}
+
+tbody tr:hover {
+  background-color: rgba(99, 102, 241, 0.05) !important;
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* Highlight the first column cell texts of data rows to stand out */
+tbody tr td:first-child {
+  font-weight: 700 !important;
+  color: var(--indigo) !important;
+}
+
+/* ── WARNING BUTTON STYLING (YELLOW WITH WHITE TEXT & SHADOW) ── */
+.btn-warning {
+  background: var(--amber) !important;
+  border-color: var(--amber) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
+}
+
+.btn-warning:hover {
+  background: #b45309 !important;
+  border-color: #b45309 !important;
+  color: #fff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.3);
 }

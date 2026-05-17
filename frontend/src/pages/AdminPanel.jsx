@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
     Building2, Users, Calendar, CheckCircle2, XCircle, 
-    UserCog, ShieldCheck, Mail, AlertCircle, Trash2 
+    UserCog, ShieldCheck, Mail, AlertCircle, Trash2, Wallet, Edit3
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ const AdminPanel = () => {
     const [requests, setRequests] = useState([]);
     const [users, setUsers] = useState([]);
     const [events, setEvents] = useState([]);
+    const [finances, setFinances] = useState(null);
     const [loading, setLoading] = useState(true);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
 
@@ -29,9 +30,11 @@ const AdminPanel = () => {
                 const res = await api.get('users');
                 setUsers(res.data);
             } else if (activeTab === 'events') {
-                // Pour l'admin, on utilise l'endpoint qui remonte tout
                 const res = await api.get('events/my-events');
                 setEvents(res.data);
+            } else if (activeTab === 'finances') {
+                const res = await api.get('stats/admin/finances');
+                setFinances(res.data);
             }
         } catch (error) {
             console.error(`Erreur chargement ${activeTab}:`, error);
@@ -137,7 +140,8 @@ const AdminPanel = () => {
                 {[
                     { id: 'requests', label: "Demandes", icon: <Building2 size={18} /> },
                     { id: 'users', label: "Utilisateurs", icon: <Users size={18} /> },
-                    { id: 'events', label: "Événements", icon: <Calendar size={18} /> }
+                    { id: 'events', label: "Événements", icon: <Calendar size={18} /> },
+                    { id: 'finances', label: "Trésorerie", icon: <Wallet size={18} /> }
                 ].map(tab => (
                     <button 
                         key={tab.id}
@@ -234,16 +238,17 @@ const AdminPanel = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ textAlign: 'left', background: 'var(--surf2)', borderBottom: '1px solid var(--borderl)' }}>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>UTILISATEUR</th>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>RÔLE</th>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>STATUT</th>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>INSCRIPTION</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>UTILISATEUR</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>RÔLE</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>STATUT</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>INSCRIPTION</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {users.map(u => (
                                             <tr key={u.id} style={{ borderBottom: '1px solid var(--borderl)', transition: '0.2s' }}>
-                                                <td style={{ padding: '20px 32px' }}>
+                                                <td style={{ padding: '20px 32px', borderRight: '1px solid var(--borderl)' }}>
                                                     <div className="flex items-center gap-3">
                                                         <div style={{ 
                                                             width: '40px', height: '40px', borderRadius: '12px', 
@@ -259,7 +264,7 @@ const AdminPanel = () => {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '20px 32px' }}>
+                                                <td style={{ padding: '20px 32px', borderRight: '1px solid var(--borderl)' }}>
                                                     <select 
                                                         value={u.role} 
                                                         onChange={(e) => handleUpdateRole(u.id, e.target.value)}
@@ -275,22 +280,37 @@ const AdminPanel = () => {
                                                         <option value="admin">Admin</option>
                                                     </select>
                                                 </td>
-                                                <td style={{ padding: '20px 32px' }}>
-                                                    <button 
-                                                        onClick={() => handleToggleStatus(u.id, u.is_active)}
+                                                <td style={{ padding: '20px 32px', borderRight: '1px solid var(--borderl)' }}>
+                                                    <span 
                                                         style={{ 
+                                                            display: 'inline-block',
                                                             padding: '6px 14px', borderRadius: '20px', 
-                                                            border: 'none', fontSize: '12px', fontWeight: '700',
-                                                            cursor: 'pointer',
+                                                            fontSize: '12px', fontWeight: '700',
                                                             backgroundColor: u.is_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)',
                                                             color: u.is_active ? 'var(--teal)' : 'var(--rose)'
                                                         }}
                                                     >
                                                         {u.is_active ? 'ACTIF' : 'SUSPENDU'}
-                                                    </button>
+                                                    </span>
                                                 </td>
-                                                <td style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)' }}>
+                                                <td style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>
                                                     {new Date(u.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td style={{ padding: '20px 32px' }}>
+                                                    <button
+                                                        onClick={() => handleToggleStatus(u.id, u.is_active)}
+                                                        className="btn btn-warning"
+                                                        style={{ 
+                                                            padding: '6px 12px', 
+                                                            fontSize: '12px', 
+                                                            fontWeight: '700',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px'
+                                                        }}
+                                                    >
+                                                        <Edit3 size={12} /> Modifier
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -305,34 +325,34 @@ const AdminPanel = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ textAlign: 'left', background: 'var(--surf2)', borderBottom: '1px solid var(--borderl)' }}>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>ÉVÉNEMENT</th>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>ASSO</th>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>DATE</th>
-                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>INSCRITS</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>ÉVÉNEMENT</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>ASSO</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>DATE</th>
+                                            <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>INSCRITS</th>
                                             <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>ACTIONS</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {events.map(evt => (
                                             <tr key={evt.id} style={{ borderBottom: '1px solid var(--borderl)' }}>
-                                                <td style={{ padding: '20px 32px' }}>
+                                                <td style={{ padding: '20px 32px', borderRight: '1px solid var(--borderl)' }}>
                                                     <div style={{ fontWeight: '700', fontSize: '14px' }}>{evt.title}</div>
                                                     <div style={{ fontSize: '12px', color: 'var(--ink3)' }}>{evt.location}</div>
                                                 </td>
-                                                <td style={{ padding: '20px 32px', fontSize: '13px', fontWeight: '600', color: 'var(--indigo)' }}>
+                                                <td style={{ padding: '20px 32px', fontSize: '13px', fontWeight: '600', color: 'var(--indigo)', borderRight: '1px solid var(--borderl)' }}>
                                                     {evt.association_name}
                                                 </td>
-                                                <td style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)' }}>
+                                                <td style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>
                                                     {new Date(evt.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
                                                 </td>
-                                                <td style={{ padding: '20px 32px' }}>
+                                                <td style={{ padding: '20px 32px', borderRight: '1px solid var(--borderl)' }}>
                                                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink2)' }}>
                                                         {evt.participant_count} / {evt.max_participants || '∞'}
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '20px 32px' }}>
                                                     <div className="flex gap-2">
-                                                        <Link to={`/events/${evt.id}/participants`} title="Voir participants" style={{ color: 'var(--ink3)' }}>
+                                                        <Link to={`/events/${evt.id}/participants`} title="Voir participants" style={{ color: 'var(--amber)' }}>
                                                             <Users size={18} />
                                                         </Link>
                                                         <button onClick={() => handleDeleteEvent(evt.id)} style={{ background: 'none', border: 'none', color: 'var(--rose)', cursor: 'pointer' }} title="Annuler">
@@ -344,6 +364,54 @@ const AdminPanel = () => {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        )}
+
+                        {/* ---- TAB: FINANCES ---- */}
+                        {activeTab === 'finances' && finances && (
+                            <div style={{ padding: '32px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '40px' }}>
+                                    <div style={{ background: 'var(--indigo)', padding: '32px', borderRadius: '20px', color: '#fff', boxShadow: '0 12px 24px rgba(79, 70, 229, 0.2)' }}>
+                                        <p style={{ opacity: 0.8, fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Commissions Dues (Plateforme)</p>
+                                        <h2 style={{ fontSize: '36px', fontWeight: '800' }}>{Number(finances.totalPlatformCommissions).toLocaleString()} MRU</h2>
+                                    </div>
+                                    <div style={{ background: 'var(--surf2)', border: '1px solid var(--borderl)', padding: '32px', borderRadius: '20px', color: 'var(--ink)', boxShadow: '0 12px 24px rgba(0, 0, 0, 0.05)' }}>
+                                        <p style={{ color: 'var(--ink3)', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>CA Global (Toutes Associations)</p>
+                                        <h2 style={{ fontSize: '36px', fontWeight: '800' }}>{Number(finances.totalAssociationsRevenue).toLocaleString()} MRU</h2>
+                                    </div>
+                                </div>
+
+                                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Détail par Association</h3>
+                                <div style={{ border: '1px solid var(--borderl)', borderRadius: '16px', overflow: 'hidden' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead style={{ background: 'var(--surf3)' }}>
+                                            <tr style={{ textAlign: 'left' }}>
+                                                <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>ASSOCIATION</th>
+                                                <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>PLAN</th>
+                                                <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>REVENU GÉNÉRÉ</th>
+                                                <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--indigo)', fontWeight: '800' }}>COMMISSION DUE</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {finances.associations.map(asso => (
+                                                <tr key={asso.id} style={{ borderBottom: '1px solid var(--borderl)', background: '#fff', transition: '0.2s' }}>
+                                                    <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>{asso.name}</td>
+                                                    <td style={{ padding: '16px 24px', borderRight: '1px solid var(--borderl)' }}>
+                                                        <span style={{ 
+                                                            fontSize: '11px', padding: '4px 8px', borderRadius: '6px', fontWeight: '800',
+                                                            background: asso.plan === 'premium' ? 'var(--indigo-light)' : 'var(--surf3)',
+                                                            color: asso.plan === 'premium' ? 'var(--indigo)' : 'var(--ink3)'
+                                                        }}>
+                                                            {asso.plan?.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>{Number(asso.total_revenue).toLocaleString()} MRU</td>
+                                                    <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '800', color: 'var(--indigo)' }}>{Number(asso.total_commission).toLocaleString()} MRU</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
                     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Calendar, MapPin, AlignLeft, Users, CreditCard, Clock, AlertCircle, CheckCircle } from 'lucide-react';
@@ -20,6 +20,19 @@ const CreateEvent = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [association, setAssociation] = useState(null);
+
+    useEffect(() => {
+        const fetchAssociation = async () => {
+            try {
+                const res = await api.get('associations/my-association');
+                setAssociation(res.data);
+            } catch (err) {
+                console.error("Erreur lors du chargement de l'association", err);
+            }
+        };
+        fetchAssociation();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -142,20 +155,28 @@ const CreateEvent = () => {
                             />
                         </div>
 
-                        <div className="flex items-center gap-2" style={{ gridColumn: '1 / -1' }}>
+                        <div className="flex items-center gap-2" style={{ gridColumn: '1 / -1', opacity: association?.plan === 'free' ? 0.6 : 1 }}>
                             <input 
                                 type="checkbox" name="is_paid" id="is_paid" 
-                                style={{ width: '1.2rem', height: '1.2rem' }}
+                                style={{ width: '1.2rem', height: '1.2rem', cursor: association?.plan === 'free' ? 'not-allowed' : 'pointer' }}
                                 onChange={handleChange}
+                                disabled={association?.plan === 'free'}
                             />
-                            <label htmlFor="is_paid" style={{ fontWeight: 600 }}>Événement payant ?</label>
+                            <label htmlFor="is_paid" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                Événement payant ? 
+                                {association?.plan === 'free' && (
+                                    <span style={{ fontSize: '11px', background: 'var(--rose-light)', color: 'var(--rose)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                        RÉSERVÉ PREMIUM
+                                    </span>
+                                )}
+                            </label>
                         </div>
 
                         {formData.is_paid && (
                             <>
                                 <div>
                                     <label className="flex items-center gap-2 mb-1" style={{ fontWeight: 600 }}>
-                                        <CreditCard size={16} /> Prix Étudiant / Invité
+                                        <CreditCard size={16} /> Prix Invité
                                     </label>
                                     <input 
                                         type="number" name="guest_price"

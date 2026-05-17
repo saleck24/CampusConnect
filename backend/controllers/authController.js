@@ -145,8 +145,89 @@ const login = async (req, res) => {
     }
 };
 
+// Mot de passe oublié
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: 'Email requis.' });
+
+        const user = await userModel.findByEmail(email);
+        if (!user) {
+            // Pour des raisons de sécurité, on peut renvoyer un succès même si l'email n'existe pas.
+            return res.status(200).json({ message: 'Si cet email existe, un lien a été envoyé.' });
+        }
+
+        // Créer un token valable 15 minutes
+        // On inclut le hachage du mot de passe dans le secret pour invalider le token si le mot de passe change
+        const secret = process.env.JWT_SECRET + user.password;
+        const resetToken = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '15m' });
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const resetLink = `${frontendUrl}/reset-password/${user.id}/${resetToken}`;
+
+        const emailHtml = `
+            <h1>Réinitialisation de mot de passe</h1>
+            <p>Bonjour ${user.name},</p>
+            <p>Vous avez demandé à réinitialiser votre mot de passe sur CampusConnect.</p>
+            <p>Cliquez sur le lien ci-dessous pour le modifier :</p>
+            <a href="${resetLink}">Réinitialiser mon mot de passe</a>
+            <p>Ce lien est valide pendant 15 minutes. Si vous n'avez rien demandé, ignorez cet e-mail.</p>
+        `;
+        
+        emailService.sendEmail(user.email, 'Réinitialisation de votre mot de passe CampusConnect', emailHtml);
+
+        res.status(200).json({ message: 'Si cet email existe, un lien a été envoyé.' });
+    } catch (error) {
+        console.error('Erreur forgotPassword:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+};
+
+// Réinitialisation du mot de passe
+const resetPassword = async (req, res) => {
+    try {
+        const { id, token } = req.params;
+        const { newPassword } = req.body;
+
+        if (!id || !token || !newPassword) {
+            return res.status(400).json({ message: 'Données manquantes.' });
+        }
+        if (newPassword.length < 8) {
+            return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères.' });
+        }
+
+        const user = await userModel.findById(id);
+        if (!user) {
+            return res.status(400).json({ message: 'Utilisateur introuvable.' });
+        }
+
+        // Pour vérifier, on a besoin du mot de passe actuel complet de l'utilisateur
+        // Comme findById ne renvoie pas le mdp (parfois), on utilise findByEmail
+        const userFull = await userModel.findByEmail(user.email);
+        const secret = process.env.JWT_SECRET + userFull.password;
+
+        try {
+            jwt.verify(token, secret);
+        } catch (err) {
+            return res.status(400).json({ message: 'Lien invalide ou expiré.' });
+        }
+
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        await userModel.updatePassword(id, hashedPassword);
+
+        res.status(200).json({ message: 'Mot de passe modifié avec succès. Vous pouvez vous connecter.' });
+    } catch (error) {
+        console.error('Erreur resetPassword:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+};
+
 module.exports = {
     register,
     confirmEmail,
-    login
+    login,
+    forgotPassword,
+    resetPassword
 };

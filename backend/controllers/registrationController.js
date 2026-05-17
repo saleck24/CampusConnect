@@ -9,17 +9,24 @@ const validatePayment = async (req, res) => {
         const { id } = req.params;
         const managerId = req.user.id;
 
-        // 1. Récupérer l'inscription
+        // 1. Récupérer l'inscription (supporte invités sans user_id)
         const [rows] = await pool.execute(`
-            SELECT r.*, e.association_id, e.title, u.email, u.name
+            SELECT r.*, e.association_id, e.title,
+                   COALESCE(u.email, r.guest_email) as email,
+                   COALESCE(u.name, r.guest_name) as name
             FROM registrations r
             JOIN events e ON r.event_id = e.id
-            JOIN users u ON r.user_id = u.id
+            LEFT JOIN users u ON r.user_id = u.id
             WHERE r.id = ?
         `, [id]);
         
         const registration = rows[0];
         if (!registration) return res.status(404).json({ message: 'Inscription introuvable.' });
+
+        if (registration.payment_status === 'PAYE') {
+            return res.status(400).json({ message: 'Ce paiement a déjà été validé.' });
+        }
+
 
         // 2. Vérifier que le manager gère bien l'asso
         if (req.user.role !== 'admin') {
@@ -30,7 +37,8 @@ const validatePayment = async (req, res) => {
         }
 
         // 3. Valider le paiement
-        await pool.execute('UPDATE registrations SET payment_status = "validated" WHERE id = ?', [id]);
+        await pool.execute("UPDATE registrations SET payment_status = 'PAYE' WHERE id = ?", [id]);
+
 
         // 4. US32: Calcul de commission (8%)
         if (registration.price_applied > 0) {
@@ -45,12 +53,15 @@ const validatePayment = async (req, res) => {
             );
         }
 
-        // 5. Envoi d'email de confirmation
-        const subject = `Paiement confirmé : ${registration.title}`;
-        const html = `<h2>Paiement validé</h2><p>Bonjour ${registration.name},</p><p>Votre paiement a été validé par l'association. Votre inscription à l'événement <strong>${registration.title}</strong> est désormais confirmée.</p><p>L'équipe CampusConnect</p>`;
-        await sendEmail(registration.email, subject, html);
+        // 5. Envoi d'email de confirmation (seulement si on a un email)
+        if (registration.email) {
+            const subject = `Paiement confirmé : ${registration.title}`;
+            const html = `<h2>Paiement validé</h2><p>Bonjour ${registration.name},</p><p>Votre paiement a été validé par l'association. Votre inscription à l'événement <strong>${registration.title}</strong> est désormais confirmée.</p><p>L'équipe CampusConnect</p>`;
+            await sendEmail(registration.email, subject, html);
+        }
 
-        res.status(200).json({ message: 'Paiement validé avec succès. Commission générée.' });
+        res.status(200).json({ message: 'Paiement validé avec succès.' });
+
     } catch (error) {
         console.error('Erreur validatePayment:', error);
         res.status(500).json({ message: 'Erreur lors de la validation.' });
@@ -58,6 +69,5 @@ const validatePayment = async (req, res) => {
 };
 
 module.exports = {
-    uploadPaymentProof,
     validatePayment
 };

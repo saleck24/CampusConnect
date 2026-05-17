@@ -1,25 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Users, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Calendar, Users, BarChart3, ArrowRight, Star, MessageSquarePlus } from 'lucide-react';
 import api from '../services/api';
+import ReviewModal from '../components/ReviewModal';
+import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState({ users: 0, associations: 0, eventsThisMonth: 0, satisfaction: 0 });
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [canReview, setCanReview] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('stats/public');
-        setStats(response.data);
+        const [statsRes, reviewsRes] = await Promise.all([
+            api.get('stats/public'),
+            api.get('reviews/recent')
+        ]);
+        setStats(statsRes.data);
+        setRecentReviews(reviewsRes.data);
+
+        // Si l'utilisateur est connecté, on vérifie s'il peut laisser un avis
+        if (user && user.role === 'etudiant') {
+            try {
+                const canReviewRes = await api.get('reviews/can-review');
+                setCanReview(canReviewRes.data.canReview);
+            } catch (err) {
+                console.error('Erreur vérification avis:', err);
+            }
+        }
       } catch (error) {
-        console.error('Erreur stats:', error);
+        console.error('Erreur data home:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
-  }, []);
+    fetchData();
+  }, [user]);
+
+  const refreshReviews = async () => {
+      try {
+          const reviewsRes = await api.get('reviews/recent');
+          setRecentReviews(reviewsRes.data);
+          
+          const statsRes = await api.get('stats/public');
+          setStats(statsRes.data);
+      } catch (error) {
+          console.error('Erreur refresh:', error);
+      }
+  };
 
   return (
     <div className="animate-fade-in">
@@ -133,7 +165,68 @@ const Home = () => {
             <div style={{ fontSize: '14px', opacity: 0.6, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Satisfaction</div>
           </div>
         </div>
+        
+        {/* Bouton Donner son avis (si éligible) */}
+        {canReview && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
+                <button onClick={() => setIsReviewModalOpen(true)} className="btn btn-primary" style={{ padding: '14px 28px', fontSize: '15px', borderRadius: '14px', background: 'var(--ink)', boxShadow: '0 8px 16px rgba(2, 6, 23, 0.2)' }}>
+                    <MessageSquarePlus size={18} />
+                    Donner mon avis sur la plateforme
+                </button>
+            </div>
+        )}
       </section>
+
+      {/* Avis Étudiants Carousel */}
+      {recentReviews && recentReviews.length > 0 && (
+          <section style={{ padding: '40px 0 80px', overflow: 'hidden' }}>
+              <div className="container" style={{ marginBottom: '32px' }}>
+                  <h2 style={{ fontSize: '28px', fontWeight: '800' }}>Ce que les étudiants en pensent</h2>
+              </div>
+              <div className="hide-scrollbar" style={{ 
+                  display: 'flex', 
+                  gap: '24px', 
+                  overflowX: 'auto', 
+                  padding: '0 24px 24px', 
+                  scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch'
+              }}>
+                  {/* Pseudo padding left pour l'alignement avec le container */}
+                  <div style={{ minWidth: 'calc((100vw - 1200px) / 2)', flexShrink: 0 }} className="hidden-mobile"></div>
+                  
+                  {recentReviews.map((review, idx) => (
+                      <div key={idx} className="ecard" style={{ 
+                          minWidth: '320px', 
+                          maxWidth: '320px', 
+                          padding: '24px', 
+                          scrollSnapAlign: 'start',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px'
+                      }}>
+                          <div className="flex items-center gap-3">
+                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--indigo) 0%, var(--indigo2) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#fff', fontWeight: '800' }}>
+                                  {review.author_initials}
+                              </div>
+                              <div className="flex gap-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star key={star} size={14} fill={star <= review.rating ? "var(--amber)" : "transparent"} color={star <= review.rating ? "var(--amber)" : "var(--borderl)"} />
+                                  ))}
+                              </div>
+                          </div>
+                          <p style={{ fontSize: '14px', color: 'var(--ink2)', fontStyle: 'italic', flex: 1, lineHeight: 1.6 }}>
+                              "{review.comment || 'Sans commentaire.'}"
+                          </p>
+                          <div style={{ fontSize: '12px', color: 'var(--ink3)' }}>
+                              {new Date(review.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </div>
+                      </div>
+                  ))}
+
+                  <div style={{ minWidth: '24px', flexShrink: 0 }}></div>
+              </div>
+          </section>
+      )}
 
       {/* Features Grid */}
       <section className="container" style={{ padding: '80px 0' }}>
@@ -188,6 +281,12 @@ const Home = () => {
           </Link>
         </div>
       </section>
+
+      <ReviewModal 
+          isOpen={isReviewModalOpen} 
+          onClose={() => setIsReviewModalOpen(false)} 
+          onReviewSubmitted={refreshReviews}
+      />
     </div>
   );
 };

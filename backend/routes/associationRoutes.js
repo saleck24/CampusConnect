@@ -5,6 +5,10 @@ const associationManagementController = require('../controllers/associationManag
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 
+// ==========================================
+// 1. SPECIFIC (NON-PARAMETERIZED) ROUTES
+// ==========================================
+
 /**
  * @swagger
  * /api/associations:
@@ -16,45 +20,6 @@ const upload = require('../middlewares/uploadMiddleware');
  *         description: Retourne la liste des associations publiques.
  */
 router.get('/', associationController.getPublicAssociations);
-
-/**
- * @swagger
- * /api/associations/{id}:
- *   get:
- *     summary: Détail d'une association
- *     tags: [Associations]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       200:
- *         description: Détails de l'association.
- *       404:
- *         description: Association non trouvée.
- */
-router.get('/:id', associationController.getAssociationDetail);
-
-/**
- * @swagger
- * /api/associations/{id}/join:
- *   post:
- *     summary: Demander à rejoindre une association
- *     tags: [Associations]
- *     security: [{ bearerAuth: [] }]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       201:
- *         description: Demande envoyée.
- *       400:
- *         description: Déjà membre ou demande en cours.
- */
-router.post('/:id/join', requireAuth, associationController.requestMembership);
 
 /**
  * @swagger
@@ -103,6 +68,94 @@ router.get(
 
 /**
  * @swagger
+ * /api/associations/my-association:
+ *   get:
+ *     summary: Détails de l'association gérée (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.get(
+    '/my-association',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.getMyAssociationDetail
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/members:
+ *   get:
+ *     summary: Liste des membres de l'association (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.get(
+    '/my-association/members',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.getAssociationMembers
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/finances:
+ *   get:
+ *     summary: Journal des transactions et CA (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.get(
+    '/my-association/finances',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.getAssociationFinances
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/pending-members:
+ *   get:
+ *     summary: Liste des demandes d'adhésion en attente (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.get(
+    '/my-association/pending-members',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.getPendingMembers
+);
+
+// ==========================================
+// 2. PARAMETERIZED (WILD_CARD) ROUTES
+// ==========================================
+
+/**
+ * @swagger
+ * /api/associations/my-association/members/{userId}/approve:
+ *   put:
+ *     summary: Approuver une demande d'adhésion (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.put(
+    '/my-association/members/:userId/approve',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.approveMember
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/members/{userId}:
+ *   delete:
+ *     summary: Révoquer un membre de l'association (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.delete(
+    '/my-association/members/:userId',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.removeMember
+);
+
+/**
+ * @swagger
  * /api/associations/admin/handle/{id}:
  *   post:
  *     summary: Valider ou refuser une demande (Admin uniquement)
@@ -135,58 +188,41 @@ router.post(
 
 /**
  * @swagger
- * /api/associations/my-association:
- *   get:
- *     summary: Détails de l'association gérée (Responsable/Admin)
- *     tags: [Association Management]
+ * /api/associations/{id}/join:
+ *   post:
+ *     summary: Demander à rejoindre une association
+ *     tags: [Associations]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       201:
+ *         description: Demande envoyée.
+ *       400:
+ *         description: Déjà membre ou demande en cours.
  */
-router.get(
-    '/my-association',
-    requireAuth,
-    requireRole(['responsable', 'admin']),
-    associationManagementController.getMyAssociationDetail
-);
+router.post('/:id/join', requireAuth, associationController.requestMembership);
 
 /**
  * @swagger
- * /api/associations/my-association/members:
+ * /api/associations/{id}:
  *   get:
- *     summary: Liste des membres de l'association (Responsable/Admin)
- *     tags: [Association Management]
+ *     summary: Détail d'une association
+ *     tags: [Associations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Détails de l'association.
+ *       404:
+ *         description: Association non trouvée.
  */
-router.get(
-    '/my-association/members',
-    requireAuth,
-    requireRole(['responsable', 'admin']),
-    associationManagementController.getAssociationMembers
-);
-
-/**
- * @swagger
- * /api/associations/my-association/members/{userId}:
- *   delete:
- *     summary: Révoquer un membre de l'association (Responsable/Admin)
- *     tags: [Association Management]
- */
-router.delete(
-    '/my-association/members/:userId',
-    requireAuth,
-    requireRole(['responsable', 'admin']),
-    associationManagementController.removeMember
-);
-
-/**
- * @swagger
- * /api/associations/my-association/finances:
- *   get:
- *     summary: Journal des transactions et CA (Responsable/Admin)
- *     tags: [Association Management]
- */
-router.get(
-    '/my-association/finances',
-    requireAuth,
-    requireRole(['responsable', 'admin']),
-    associationManagementController.getAssociationFinances
-);
+router.get('/:id', associationController.getAssociationDetail);
 
 module.exports = router;

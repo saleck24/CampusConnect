@@ -92,7 +92,6 @@ CREATE TABLE IF NOT EXISTS `registrations` (
   `event_id` int NOT NULL,
   `price_applied` decimal(10,2) DEFAULT NULL,
   `payment_status` enum('pending','validated','free') COLLATE utf8mb4_unicode_ci DEFAULT 'free',
-  `payment_proof_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_user_event` (`user_id`,`event_id`),

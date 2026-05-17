@@ -42,6 +42,11 @@ const toggleStatus = async (id, isActive) => {
     await pool.execute('UPDATE users SET is_active = ? WHERE id = ?', [isActive, id]);
 };
 
+// Reset Password
+const updatePassword = async (id, hashedPassword) => {
+    await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
+};
+
 /**
  * Récupérer les noms des X derniers utilisateurs pour générer des avatars
  */
@@ -65,5 +70,6 @@ module.exports = {
     findAll,
     updateRole,
     toggleStatus,
-    getRecentInitials
+    getRecentInitials,
+    updatePassword
 };

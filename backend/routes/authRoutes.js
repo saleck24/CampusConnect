@@ -72,4 +72,22 @@ router.post('/login', authController.login);
  */
 router.get('/confirm/:token', authController.confirmEmail);
 
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Demander une réinitialisation de mot de passe
+ *     tags: [Auth]
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password/{id}/{token}:
+ *   post:
+ *     summary: Réinitialiser le mot de passe
+ *     tags: [Auth]
+ */
+router.post('/reset-password/:id/:token', authController.resetPassword);
+
 module.exports = router;

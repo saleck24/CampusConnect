@@ -1,4 +1,5 @@
 const associationModel = require('../models/associationModel');
+const userModel = require('../models/userModel');
 const emailService = require('../utils/emailService');
 
 // --- Côté Public ---
@@ -93,15 +94,21 @@ const handleRequest = async (req, res) => {
         const { id } = req.params; // Association ID
         const { action, requestor_id, membership_id, motif } = req.body; // action: 'approve' | 'refuse'
 
+        // Récupérer l'email de l'utilisateur de manière sécurisée depuis la DB
+        const requestor = await userModel.findById(requestor_id);
+        const recipientEmail = requestor ? requestor.email : req.body.requestor_email;
+
         if (action === 'approve') {
             await associationModel.validateAssociation(id, requestor_id, membership_id);
             
             // Notification
-            emailService.sendEmail(
-                req.body.requestor_email, 
-                'Demande d\'association approuvée', 
-                '<p>Félicitations, votre demande d\'association a été validée ! Vous avez désormais le rôle de <strong>Responsable</strong>.</p>'
-            );
+            if (recipientEmail) {
+                emailService.sendEmail(
+                    recipientEmail, 
+                    'Demande d\'association approuvée', 
+                    '<p>Félicitations, votre demande d\'association a été validée ! Vous avez désormais le rôle de <strong>Responsable</strong>.</p>'
+                );
+            }
 
             res.status(200).json({ message: 'L\'association a été approuvée avec succès.' });
 
@@ -109,11 +116,13 @@ const handleRequest = async (req, res) => {
             await associationModel.refuseAssociation(id);
 
             // Notification avec motif
-            emailService.sendEmail(
-                req.body.requestor_email, 
-                'Demande d\'association refusée', 
-                `<p>Désolé, votre demande a été refusée pour le motif suivant :</p><blockquote>${motif || 'Non spécifié'}</blockquote>`
-            );
+            if (recipientEmail) {
+                emailService.sendEmail(
+                    recipientEmail, 
+                    'Demande d\'association refusée', 
+                    `<p>Désolé, votre demande a été refusée pour le motif suivant :</p><blockquote>${motif || 'Non spécifié'}</blockquote>`
+                );
+            }
 
             res.status(200).json({ message: 'La demande a été refusée et supprimée.' });
         } else {

@@ -160,7 +160,7 @@ const EventDetail = () => {
                 </Link>
                 {isOwner && !editing && (
                     <div className="flex gap-2">
-                        <button onClick={() => setEditing(true)} className="btn btn-secondary flex items-center gap-2">
+                        <button onClick={() => setEditing(true)} className="btn flex items-center gap-2" style={{ backgroundColor: '#FBBF24', color: '#fff' }}>
                             <Edit2 size={16} /> Modifier
                         </button>
                         <button onClick={handleDelete} className="btn" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>

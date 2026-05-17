@@ -18,7 +18,6 @@ const initCronJobs = () => {
             for (const event of upcomingEvents) {
                 const participants = await eventModel.getParticipants(event.id);
                 if (participants.length > 0) {
-                    const emails = participants.map(p => p.email).join(', ');
                     const date = new Date(event.date).toLocaleString('fr-FR');
                     
                     // On envoie en copie cachée (Bcc) pour ne pas exposer les emails

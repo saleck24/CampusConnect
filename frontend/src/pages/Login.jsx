@@ -172,7 +172,7 @@ const Login = () => {
                             <div className="form-group">
                                 <div className="flex justify-between items-center">
                                     <label className="form-label">Mot de passe</label>
-                                    <Link to="#" style={{ fontSize: '12px', color: 'var(--indigo)', fontWeight: '700', textDecoration: 'none' }}>Oublié ?</Link>
+                                    <Link to="/forgot-password" style={{ fontSize: '12px', color: 'var(--indigo)', fontWeight: '700', textDecoration: 'none' }}>Oublié ?</Link>
                                 </div>
                                 <div className="form-input-container">
                                     <Lock size={18} className="form-icon" />

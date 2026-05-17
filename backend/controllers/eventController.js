@@ -157,7 +157,7 @@ const registerToEvent = async (req, res) => {
         // -----------------------------------------------
         // CAS B : Visiteur anonyme (sans compte)
         // -----------------------------------------------
-        const { guest_name, guest_email } = req.body;
+        const { guest_name, guest_email, guest_phone } = req.body;
 
         if (!guest_name || !guest_email) {
             return res.status(400).json({ message: 'Les champs guest_name et guest_email sont requis pour s\'inscrire sans compte.' });
@@ -172,7 +172,7 @@ const registerToEvent = async (req, res) => {
         // Un visiteur paie toujours le tarif invité (guest_price)
         const price = event.is_paid ? event.guest_price : 0;
 
-        await eventModel.register({ user_id: null, event_id: eventId, price, guest_name, guest_email });
+        await eventModel.register({ user_id: null, event_id: eventId, price, guest_name, guest_email, guest_phone });
         return res.status(201).json({ message: 'Inscription réussie en tant qu\'invité !' });
 
     } catch (error) {
@@ -235,9 +235,15 @@ const updateEvent = async (req, res) => {
             }
         }
 
-        const conflict = await eventModel.checkConflict(req.body.location, req.body.date, req.body.end_date);
-        if (conflict && conflict.id !== Number(eventId)) {
-            return res.status(409).json({ message: `Conflit de salle : "${conflict.title}" occupe déjà ce créneau.` });
+        const checkLocation = req.body.location !== undefined ? req.body.location : event.location;
+        const checkDate = req.body.date !== undefined ? req.body.date : event.date;
+        const checkEndDate = req.body.end_date !== undefined ? req.body.end_date : event.end_date;
+
+        if (req.body.location !== undefined || req.body.date !== undefined || req.body.end_date !== undefined) {
+            const conflict = await eventModel.checkConflict(checkLocation, checkDate, checkEndDate);
+            if (conflict && conflict.id !== Number(eventId)) {
+                return res.status(409).json({ message: `Conflit de salle : "${conflict.title}" occupe déjà ce créneau.` });
+            }
         }
 
         await eventModel.update(eventId, req.body);

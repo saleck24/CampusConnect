@@ -17,6 +17,8 @@ import AssociationDetails from './pages/AssociationDetails';
 import Events from './pages/Events';
 import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import EventParticipants from './pages/EventParticipants';
 import EventDetail from './pages/EventDetail';
 
@@ -45,6 +47,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/confirm/:token" element={<ConfirmEmail />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
             </Routes>
           </main>
           

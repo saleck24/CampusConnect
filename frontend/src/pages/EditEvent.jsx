@@ -204,7 +204,7 @@ const EditEvent = () => {
                             <>
                                 <div>
                                     <label className="flex items-center gap-2 mb-1" style={{ fontWeight: 600 }}>
-                                        <CreditCard size={16} /> Prix Étudiant / Invité
+                                        <CreditCard size={16} /> Prix Invité
                                     </label>
                                     <input 
                                         type="number" name="guest_price"

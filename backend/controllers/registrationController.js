@@ -40,9 +40,9 @@ const validatePayment = async (req, res) => {
         await pool.execute("UPDATE registrations SET payment_status = 'PAYE' WHERE id = ?", [id]);
 
 
-        // 4. US32: Calcul de commission (8%)
+        // 4. US32: Calcul de commission (10%)
         if (registration.price_applied > 0) {
-            const rate = 8.00;
+            const rate = 10.00;
             const amount = (registration.price_applied * rate) / 100;
             await commissionModel.createCommission(
                 registration.association_id,

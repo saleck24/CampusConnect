@@ -146,9 +146,14 @@ const registerToEvent = async (req, res) => {
             // Tarif : membre de l'association → member_price, sinon guest_price
             const associationId = await associationModel.getUserAssociationId(userId);
             const isMember = associationId && Number(associationId) === Number(event.association_id);
-            const price = event.is_paid
+            let price = event.is_paid
                 ? (isMember ? event.member_price : event.guest_price)
                 : 0;
+
+            // Réduction de 20% pour les 10 premiers inscrits aux événements payants (retour prof/choix utilisateur)
+            if (event.is_paid && currentRegistrations < 10) {
+                price = Number((price * 0.8).toFixed(2));
+            }
 
             await eventModel.register({ user_id: userId, event_id: eventId, price });
             return res.status(201).json({ message: 'Inscription réussie !' });
@@ -170,7 +175,12 @@ const registerToEvent = async (req, res) => {
         }
 
         // Un visiteur paie toujours le tarif invité (guest_price)
-        const price = event.is_paid ? event.guest_price : 0;
+        let price = event.is_paid ? event.guest_price : 0;
+
+        // Réduction de 20% pour les 10 premiers inscrits aux événements payants (retour prof/choix utilisateur)
+        if (event.is_paid && currentRegistrations < 10) {
+            price = Number((price * 0.8).toFixed(2));
+        }
 
         await eventModel.register({ user_id: null, event_id: eventId, price, guest_name, guest_email, guest_phone });
         return res.status(201).json({ message: 'Inscription réussie en tant qu\'invité !' });
@@ -311,6 +321,16 @@ const deleteEvent = async (req, res) => {
     }
 };
 
+const getFeaturedEvents = async (req, res) => {
+    try {
+        const events = await eventModel.findFeatured();
+        res.status(200).json(events);
+    } catch (error) {
+        console.error('Erreur getFeaturedEvents:', error);
+        res.status(500).json({ message: 'Erreur lors de la récupération des événements à la une.' });
+    }
+};
+
 module.exports = {
     getEvents,
     getMyEvents,
@@ -320,5 +340,6 @@ module.exports = {
     unregisterFromEvent,
     updateEvent,
     deleteEvent,
-    getEventParticipants
+    getEventParticipants,
+    getFeaturedEvents
 };

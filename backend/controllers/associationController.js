@@ -152,11 +152,32 @@ const requestMembership = async (req, res) => {
     }
 };
 
+// Mettre à niveau une association au plan Premium (Admin uniquement)
+const upgradeAssociation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const premiumUntil = await associationModel.upgradeToPremium(id);
+        
+        if (!premiumUntil) {
+            return res.status(404).json({ message: 'Association introuvable.' });
+        }
+
+        res.status(200).json({ 
+            message: 'L\'association a été mise à niveau vers Premium avec succès.', 
+            premium_until: premiumUntil 
+        });
+    } catch (error) {
+        console.error('Erreur upgradeAssociation:', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la mise à niveau.' });
+    }
+};
+
 module.exports = {
     getPublicAssociations,
     getAssociationDetail,
     createAssociationRequest,
     getPendingRequests,
     handleRequest,
-    requestMembership
+    requestMembership,
+    upgradeAssociation
 };

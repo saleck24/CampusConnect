@@ -3,25 +3,76 @@ import { Link } from 'react-router-dom';
 import { Calendar, Users, BarChart3, ArrowRight, Star, MessageSquarePlus } from 'lucide-react';
 import api from '../services/api';
 import ReviewModal from '../components/ReviewModal';
+import SponsorModal from '../components/SponsorModal';
 import { useAuth } from '../context/AuthContext';
+
+// Known sponsor brand data (logos & colors)
+const KNOWN_SPONSORS = {
+  'Mauritel': {
+    logo_url: '/logo_mauritel.svg',
+    website_url: 'https://www.mauritel.mr'
+  },
+  'Mattel': {
+    logo_url: '/logo_mattel.png',
+    website_url: 'https://www.mattel.mr'
+  },
+  'Chinguitel': {
+    logo_url: '/logo_chinguitel.png',
+    website_url: 'https://www.chinguitel.mr'
+  },
+  'Banque Populaire de Mauritanie': {
+    logo_url: '/logo_bpm.JPG',
+    website_url: 'https://www.bpm.mr'
+  },
+  'ATH': {
+    logo_url: '/logo_ATH.jfif',
+    website_url: 'https://ath-academy.com/'
+  }
+};
 
 const Home = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({ users: 0, associations: 0, eventsThisMonth: 0, satisfaction: 0 });
   const [recentReviews, setRecentReviews] = useState([]);
+  const [featuredEvents, setFeaturedEvents] = useState([]);
+  const [activeSponsors, setActiveSponsors] = useState([]);
   const [canReview, setCanReview] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+
+  // Use loading state to show a spinner while data is being fetched
+  const LoadingOverlay = () => (
+    <div className="loading-overlay">
+      <div className="spinner" />
+    </div>
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, reviewsRes] = await Promise.all([
+        const [statsRes, reviewsRes, featuredRes, sponsorsRes] = await Promise.all([
             api.get('stats/public'),
-            api.get('reviews/recent')
+            api.get('reviews/recent'),
+            api.get('events/featured'),
+            api.get('sponsors/active')
         ]);
         setStats(statsRes.data);
         setRecentReviews(reviewsRes.data);
+        setFeaturedEvents(featuredRes.data);
+        // Enrich sponsors with known brand data
+        const enrichedSponsors = sponsorsRes.data.map(s => {
+            const known = KNOWN_SPONSORS[s.name];
+            if (!known) return s;
+            return {
+              ...s,
+              logo_url: s.logo_url || known.logo_url,
+              brand_color: s.brand_color || known.brand_color,
+              website_url: s.website_url || known.website_url
+            };
+        });
+        setActiveSponsors(enrichedSponsors);
 
         // Si l'utilisateur est connecté, on vérifie s'il peut laisser un avis
         if (user && user.role === 'etudiant') {
@@ -53,6 +104,7 @@ const Home = () => {
       }
   };
 
+  if (loading) return <LoadingOverlay />;
   return (
     <div className="animate-fade-in">
       {/* Hero Section */}
@@ -126,7 +178,119 @@ const Home = () => {
               </span>
           </div>
         </div>
-      </section>
+              
+
+    </section>
+
+      {/* Événements Premium à la Une Carousel */}
+      {featuredEvents && featuredEvents.length > 0 && (
+        <section style={{ padding: '60px 0 20px', background: 'var(--surf)', overflow: 'hidden' }}>
+          <div className="container" style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.02em', color: 'var(--ink)' }}>Événements à la une</h2>
+              <p style={{ color: 'var(--ink3)', marginTop: '4px', fontSize: '15px' }}>Découvrez les activités phares de nos associations Premium partenaires</p>
+            </div>
+            <Link to="/events" className="btn btn-secondary" style={{ padding: '10px 20px', borderRadius: '12px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Tout voir <ArrowRight size={16} />
+            </Link>
+          </div>
+          
+          <div className="hide-scrollbar" style={{ 
+              display: 'flex', 
+              gap: '24px', 
+              overflowX: 'auto', 
+              padding: '0 24px 24px', 
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch'
+          }}>
+              <div style={{ minWidth: 'calc((100vw - 1200px) / 2)', flexShrink: 0 }} className="hidden-mobile"></div>
+              
+              {featuredEvents.map((event, idx) => (
+                  <div key={idx} style={{ 
+                      minWidth: '340px', 
+                      maxWidth: '340px', 
+                      padding: '24px', 
+                      scrollSnapAlign: 'start',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px',
+                      background: '#fff',
+                      borderRadius: '24px',
+                      border: '1px solid var(--borderl)',
+                      boxShadow: '0 8px 30px rgba(0,0,0,0.03)',
+                      transition: 'transform 0.2s, box-shadow 0.2s'
+                  }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ 
+                              fontSize: '11px', 
+                              background: 'var(--indigo-light)', 
+                              color: 'var(--indigo)', 
+                              fontWeight: '800', 
+                              padding: '6px 12px', 
+                              borderRadius: '20px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                          }}>
+                              À la une
+                          </span>
+                          <div style={{ fontSize: '13px', color: 'var(--ink3)', fontWeight: '600' }}>
+                              {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <div style={{ 
+                              width: '40px', 
+                              height: '40px', 
+                              borderRadius: '12px', 
+                              background: 'var(--surf2)', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                              border: '1px solid var(--borderl)'
+                          }}>
+                              {event.association_logo ? (
+                                  <img src={`${api.defaults.baseURL.replace('/api', '')}${event.association_logo}`} alt={event.association_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                  <span style={{ fontWeight: '800', color: 'var(--indigo)' }}>{event.association_name.slice(0, 2).toUpperCase()}</span>
+                              )}
+                          </div>
+                          <div>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink)' }}>{event.association_name}</div>
+                              <div style={{ fontSize: '11px', color: 'var(--ink3)' }}>Organisateur</div>
+                          </div>
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--ink)', marginBottom: '8px', lineHeight: 1.3 }}>{event.title}</h3>
+                          <p style={{ fontSize: '14px', color: 'var(--ink2)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {event.description || 'Aucune description fournie.'}
+                          </p>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--borderl)', paddingTop: '16px' }}>
+                          <div style={{ fontSize: '13px', color: 'var(--ink3)', fontWeight: '500' }}>
+                              Lieu : <b>{event.location || 'Sur le campus'}</b>
+                          </div>
+                          <div>
+                              {event.is_paid ? (
+                                  <span style={{ fontWeight: '800', color: 'var(--indigo)', fontSize: '15px' }}>{event.guest_price} MRU</span>
+                              ) : (
+                                  <span style={{ fontWeight: '800', color: '#10B981', fontSize: '15px' }}>Gratuit</span>
+                              )}
+                          </div>
+                      </div>
+
+                      <Link to={`/events`} className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '10px 0', borderRadius: '12px', fontSize: '14px' }}>
+                          S'inscrire
+                      </Link>
+                  </div>
+              ))}
+              <div style={{ minWidth: '24px', flexShrink: 0 }}></div>
+          </div>
+        </section>
+      )}
 
       {/* Stats Section */}
       <section className="container" style={{ padding: '40px 0 80px' }}>
@@ -259,6 +423,146 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Sponsors Section - Infinite CSS Marquee */}
+      <section style={{ padding: '60px 0', background: 'var(--surf2)', overflow: 'hidden' }}>
+        <div className="container text-center">
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--ink)', marginBottom: '12px' }}>
+            Ils soutiennent la communauté étudiante
+          </h2>
+          <p style={{ color: 'var(--ink3)', fontSize: '14px', maxWidth: '500px', margin: '0 auto 36px', fontWeight: '500' }}>
+            Découvrez nos partenaires engagés pour le développement académique et professionnel de notre campus.
+          </p>
+        </div>
+
+        {(() => {
+          // Build the list of sponsors to display
+          const displaySponsors = activeSponsors && activeSponsors.length > 0
+            ? activeSponsors
+            : Object.entries(KNOWN_SPONSORS).map(([name, data]) => ({ name, ...data }));
+          // Duplicate for infinite scroll effect
+          const doubled = [...displaySponsors, ...displaySponsors];
+          const itemCount = displaySponsors.length;
+
+          return (
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              overflow: 'hidden',
+              padding: '10px 0 20px',
+              maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)'
+            }}>
+              <style>{`
+                @keyframes sponsorScroll {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-${itemCount * 240}px); }
+                }
+                .sponsor-track {
+                  display: flex;
+                  gap: 24px;
+                  width: max-content;
+                  animation: sponsorScroll ${itemCount * 4}s linear infinite;
+                }
+                .sponsor-track:hover {
+                  animation-play-state: paused;
+                }
+                .sponsor-card {
+                  flex-shrink: 0;
+                  width: 210px;
+                  height: 90px;
+                  border-radius: 20px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  padding: 16px 20px;
+                  border: 1px solid var(--borderl);
+                  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+                  transition: transform 0.3s ease, box-shadow 0.3s ease;
+                  text-decoration: none;
+                  overflow: hidden;
+                }
+                .sponsor-card:hover {
+                  transform: scale(1.08) translateY(-4px);
+                  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+                }
+              `}</style>
+              <div className="sponsor-track">
+                {doubled.map((sponsor, idx) => {
+                  const isExternal = sponsor.logo_url && (
+                    sponsor.logo_url.startsWith('http://') || 
+                    sponsor.logo_url.startsWith('https://') || 
+                    sponsor.logo_url.startsWith('/logo_')
+                  );
+                  const logoSrc = sponsor.logo_url
+                    ? (isExternal ? sponsor.logo_url : `${api.defaults.baseURL.replace('/api', '')}${sponsor.logo_url}`)
+                    : null;
+
+                  return (
+                    <a
+                      key={idx}
+                      href={sponsor.website_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sponsor-card"
+                      style={{ background: 'var(--surf3)' }}
+                    >
+                      {logoSrc ? (
+                        <img
+                          src={logoSrc}
+                          alt={sponsor.name}
+                          style={{
+                            maxHeight: '55px',
+                            maxWidth: '160px',
+                            objectFit: 'contain',
+                            filter: sponsor.brand_color ? 'brightness(0) invert(1)' : 'none'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling && (e.target.nextSibling.style.display = 'block');
+                          }}
+                        />
+                      ) : null}
+                      <span style={{
+                        display: logoSrc ? 'none' : 'block',
+                        fontWeight: '800',
+                        fontSize: '15px',
+                        color: sponsor.brand_color ? '#fff' : 'var(--ink)',
+                        letterSpacing: '-0.01em',
+                        textAlign: 'center'
+                      }}>
+                        {sponsor.name}
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        <div className="container text-center">
+          <div style={{ marginTop: '24px', fontSize: '12px', color: 'var(--ink3)', fontWeight: '600' }}>
+            Vous êtes une entreprise ? Contactez l'administration pour{' '}
+            <button 
+              onClick={() => setIsSponsorModalOpen(true)}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                padding: 0, 
+                font: 'inherit', 
+                color: 'var(--indigo)', 
+                textDecoration: 'underline', 
+                fontWeight: '700', 
+                cursor: 'pointer' 
+              }}
+            >
+              devenir partenaire sponsor
+            </button>{' '}
+            (5 000 MRU / mois).
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="container" style={{ padding: '100px 0' }}>
         <div style={{ 
@@ -286,6 +590,10 @@ const Home = () => {
           isOpen={isReviewModalOpen} 
           onClose={() => setIsReviewModalOpen(false)} 
           onReviewSubmitted={refreshReviews}
+      />
+      <SponsorModal 
+          isOpen={isSponsorModalOpen} 
+          onClose={() => setIsSponsorModalOpen(false)} 
       />
     </div>
   );

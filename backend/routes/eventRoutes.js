@@ -17,6 +17,15 @@ router.get('/', eventController.getEvents);
 
 /**
  * @swagger
+ * /api/events/featured:
+ *   get:
+ *     summary: Événements à la une (Associations Premium)
+ *     tags: [Events]
+ */
+router.get('/featured', eventController.getFeaturedEvents);
+
+/**
+ * @swagger
  * /api/events/detail/{id}:
  *   get:
  *     summary: Détails complets d'un événement

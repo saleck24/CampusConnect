@@ -122,6 +122,20 @@ router.get(
     associationManagementController.getPendingMembers
 );
 
+/**
+ * @swagger
+ * /api/associations/my-association/settings:
+ *   put:
+ *     summary: "Modifier les paramètres de l'association (Ex: cotisation)"
+ *     tags: [Association Management]
+ */
+router.put(
+    '/my-association/settings',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.updateAssociationSettings
+);
+
 // ==========================================
 // 2. PARAMETERIZED (WILD_CARD) ROUTES
 // ==========================================
@@ -138,6 +152,20 @@ router.put(
     requireAuth,
     requireRole(['responsable', 'admin']),
     associationManagementController.approveMember
+);
+
+/**
+ * @swagger
+ * /api/associations/my-association/members/{userId}/validate-payment:
+ *   put:
+ *     summary: Valider le paiement de la cotisation (Responsable/Admin)
+ *     tags: [Association Management]
+ */
+router.put(
+    '/my-association/members/:userId/validate-payment',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    associationManagementController.validateMembershipPayment
 );
 
 /**
@@ -184,6 +212,20 @@ router.post(
     requireAuth, 
     requireRole(['admin']), 
     associationController.handleRequest
+);
+
+/**
+ * @swagger
+ * /api/associations/admin/upgrade/{id}:
+ *   post:
+ *     summary: Passer une association au plan premium pour 30 jours (Admin uniquement)
+ *     tags: [Admin]
+ */
+router.post(
+    '/admin/upgrade/:id',
+    requireAuth,
+    requireRole(['admin']),
+    associationController.upgradeAssociation
 );
 
 /**

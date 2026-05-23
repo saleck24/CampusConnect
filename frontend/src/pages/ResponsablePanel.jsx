@@ -119,6 +119,19 @@ const ResponsablePanel = () => {
         });
     };
 
+    const handleValidateMembershipPayment = async (userId) => {
+        askConfirm("Confirmer la réception de la cotisation annuelle de cet étudiant ?", async () => {
+            try {
+                await api.put(`associations/my-association/members/${userId}/validate-payment`);
+                const res = await api.get('associations/my-association/members');
+                setMembers(res.data);
+                showSuccess('Cotisation validée ! La commission CampusConnect a été calculée automatiquement.');
+            } catch (error) {
+                setStatusMsg({ type: 'error', text: error.response?.data?.message || 'Erreur lors de la validation de la cotisation.' });
+            }
+        });
+    };
+
     const handleApproveMember = async (userId) => {
         try {
             await api.put(`associations/my-association/members/${userId}/approve`);
@@ -129,6 +142,22 @@ const ResponsablePanel = () => {
             setStatusMsg({ type: 'success', text: 'Adhésion approuvée !' });
         } catch (error) {
             setStatusMsg({ type: 'error', text: 'Erreur lors de l\'approbation.' });
+        }
+    };
+
+    const handleUpdateSettings = async (e) => {
+        e.preventDefault();
+        const fee = parseFloat(e.target.membership_fee.value);
+        if (isNaN(fee) || fee < 0) {
+            setStatusMsg({ type: 'error', text: 'Montant de cotisation invalide.' });
+            return;
+        }
+        try {
+            await api.put('associations/my-association/settings', { membership_fee: fee });
+            setAssociation(prev => ({ ...prev, membership_fee: fee }));
+            showSuccess(`Cotisation annuelle mise à jour : ${fee} MRU`);
+        } catch (error) {
+            setStatusMsg({ type: 'error', text: error.response?.data?.message || 'Erreur lors de la mise à jour.' });
         }
     };
 
@@ -352,6 +381,47 @@ const ResponsablePanel = () => {
                         {/* TAB: MEMBERS */}
                         {activeTab === 'members' && (
                             <div>
+                                {/* Configuration de la cotisation (si Premium) */}
+                                {association && association.plan === 'premium' && (
+                                    <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--borderl)', background: 'var(--indigo-light)' }}>
+                                        <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--indigo)', marginBottom: '8px' }}>
+                                            Configuration de la Cotisation Annuelle
+                                        </h3>
+                                        <p style={{ fontSize: '13px', color: 'var(--ink3)', marginBottom: '16px' }}>
+                                            Définissez le montant de la cotisation annuelle obligatoire pour les nouveaux adhérents de votre association.
+                                        </p>
+                                        <form onSubmit={handleUpdateSettings} className="flex gap-4" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                            <div style={{ flex: '1', minWidth: '200px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--ink2)', marginBottom: '6px' }}>
+                                                    Montant de la cotisation (MRU)
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    name="membership_fee"
+                                                    defaultValue={association.membership_fee || 0}
+                                                    min="0"
+                                                    step="0.01"
+                                                    style={{ 
+                                                        width: '100%', 
+                                                        padding: '10px 14px', 
+                                                        borderRadius: '10px', 
+                                                        border: '1px solid var(--borderl)',
+                                                        fontSize: '14px',
+                                                        fontWeight: '600'
+                                                    }}
+                                                />
+                                            </div>
+                                            <button 
+                                                type="submit" 
+                                                className="btn btn-primary"
+                                                style={{ padding: '10px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: '700', height: '42px' }}
+                                            >
+                                                Mettre à jour
+                                            </button>
+                                        </form>
+                                    </div>
+                                )}
+
                                 {/* Section : Demandes en attente */}
                                 {pendingMembers.length > 0 && (
                                     <div style={{ borderBottom: '1px solid var(--borderl)', padding: '24px 32px' }}>
@@ -408,6 +478,9 @@ const ResponsablePanel = () => {
                                                 <tr style={{ textAlign: 'left' }}>
                                                     <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>ADHÉRENT</th>
                                                     <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>CONTACT</th>
+                                                    {association && association.plan === 'premium' && (
+                                                        <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>COTISATION</th>
+                                                    )}
                                                     <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>DEPUIS LE</th>
                                                     <th style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)' }}>ACTIONS</th>
                                                 </tr>
@@ -421,6 +494,32 @@ const ResponsablePanel = () => {
                                                         <td style={{ padding: '20px 32px', fontSize: '14px', color: 'var(--ink2)', borderRight: '1px solid var(--borderl)' }}>
                                                             {m.email}
                                                         </td>
+                                                        {association && association.plan === 'premium' && (
+                                                            <td style={{ padding: '20px 32px', borderRight: '1px solid var(--borderl)' }}>
+                                                                {m.payment_status === 'pending' ? (
+                                                                    <div className="flex flex-column gap-2">
+                                                                        <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#FEF3C7', color: '#D97706', width: 'fit-content' }}>
+                                                                            {m.price_applied} MRU (EN ATTENTE)
+                                                                        </span>
+                                                                        <button 
+                                                                            onClick={() => handleValidateMembershipPayment(m.id)}
+                                                                            className="btn btn-primary"
+                                                                            style={{ padding: '4px 8px', fontSize: '11px', fontWeight: '700', width: 'fit-content' }}
+                                                                        >
+                                                                            Valider Cotisation
+                                                                        </button>
+                                                                    </div>
+                                                                ) : m.payment_status === 'validated' ? (
+                                                                    <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#D1FAE5', color: '#059669' }}>
+                                                                        {m.price_applied} MRU (PAYÉ)
+                                                                    </span>
+                                                                ) : (
+                                                                    <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: 'var(--surf3)', color: 'var(--ink3)' }}>
+                                                                        Gratuit
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                        )}
                                                         <td style={{ padding: '20px 32px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>
                                                             {new Date(m.joined_at).toLocaleDateString()}
                                                         </td>

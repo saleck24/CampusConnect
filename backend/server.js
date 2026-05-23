@@ -15,7 +15,9 @@ const app = express();
 console.log(">>> [DEBUG] Serveur en cours d'exécution - Chargement des routes...");
 
 // Middlewares
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
@@ -37,6 +39,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
+const sponsorRoutes = require('./routes/sponsorRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/associations', associationRoutes);
@@ -45,6 +48,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/registrations', registrationRoutes);
+app.use('/api/sponsors', sponsorRoutes);
 
 // Routes de test
 app.get('/', (req, res) => {

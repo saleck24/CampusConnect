@@ -1,14 +1,14 @@
 const pool = require('../config/db');
 
 const findAll = async () => {
-    // On récupère les événements futurs, triés par date
-    // On joint avec les assos pour avoir le nom de l'association
+    // On récupère les événements futurs, triés par plan premium d'abord, puis par date
+    // On joint avec les assos pour avoir le nom de l'association et le plan
     const [rows] = await pool.execute(`
-        SELECT e.*, a.name as association_name, a.logo_url as association_logo
+        SELECT e.*, a.name as association_name, a.logo_url as association_logo, a.plan as association_plan
         FROM events e
         JOIN associations a ON e.association_id = a.id
         WHERE e.end_date >= NOW() AND e.is_cancelled = FALSE
-        ORDER BY e.date ASC
+        ORDER BY (a.plan = 'premium') DESC, e.date ASC
     `, []);
     return rows;
 };
@@ -203,6 +203,19 @@ const countEventsThisMonth = async (associationId) => {
     return rows[0].count;
 };
 
+// Récupérer les événements des associations Premium (Mise en avant / Carrousel)
+const findFeatured = async () => {
+    const [rows] = await pool.execute(`
+        SELECT e.*, a.name as association_name, a.logo_url as association_logo, a.plan as association_plan
+        FROM events e
+        JOIN associations a ON e.association_id = a.id
+        WHERE e.end_date >= NOW() AND e.is_cancelled = FALSE AND a.plan = 'premium'
+        ORDER BY e.date ASC
+        LIMIT 6
+    `, []);
+    return rows;
+};
+
 module.exports = {
     findAll,
     findById,
@@ -220,5 +233,6 @@ module.exports = {
     findEventsStartingBetween,
     getUserHistory,
     countEventsThisMonth,
-    isGuestRegistered
+    isGuestRegistered,
+    findFeatured
 };

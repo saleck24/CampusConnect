@@ -14,7 +14,7 @@ const getAssociationMembers = async (req, res) => {
         }
 
         const [rows] = await pool.execute(`
-            SELECT u.id, u.name, u.email, am.created_at as joined_at, am.status
+            SELECT u.id, u.name, u.email, am.created_at as joined_at, am.status, am.price_applied, am.payment_status
             FROM association_members am
             JOIN users u ON am.user_id = u.id
             WHERE am.association_id = ? AND am.status = 'approved'
@@ -168,11 +168,102 @@ const approveMember = async (req, res) => {
     }
 };
 
+/**
+ * Met à jour les paramètres de l'association (Ex: Cotisation annuelle - Plan Premium requis)
+ */
+const updateAssociationSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const associationId = await associationModel.getUserAssociationId(userId);
+
+        if (!associationId) {
+            return res.status(403).json({ message: 'Vous ne gérez aucune association.' });
+        }
+
+        const association = await associationModel.getById(associationId);
+        if (!association) {
+            return res.status(404).json({ message: 'Association introuvable.' });
+        }
+
+        // Seules les associations Premium peuvent définir des frais d'adhésion
+        if (association.plan !== 'premium') {
+            return res.status(403).json({ message: 'La gestion des cotisations annuelles est réservée aux associations Premium.' });
+        }
+
+        const { membership_fee } = req.body;
+        if (membership_fee === undefined || isNaN(membership_fee) || Number(membership_fee) < 0) {
+            return res.status(400).json({ message: 'Montant de cotisation invalide.' });
+        }
+
+        await pool.execute(
+            'UPDATE associations SET membership_fee = ? WHERE id = ?',
+            [Number(membership_fee), associationId]
+        );
+
+        res.status(200).json({ message: 'Paramètres mis à jour avec succès.', membership_fee: Number(membership_fee) });
+    } catch (error) {
+        console.error('Erreur updateAssociationSettings:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+};
+
+/**
+ * Valide le paiement de la cotisation d'adhésion d'un membre et génère la commission de 5%
+ */
+const validateMembershipPayment = async (req, res) => {
+    try {
+        const { userId: targetUserId } = req.params;
+        const managerId = req.user.id;
+        const associationId = await associationModel.getUserAssociationId(managerId);
+
+        if (!associationId) return res.status(403).json({ message: 'Non autorisé.' });
+
+        // 1. Récupérer la relation d'adhésion
+        const [rows] = await pool.execute(
+            'SELECT id, price_applied, payment_status FROM association_members WHERE user_id = ? AND association_id = ?',
+            [targetUserId, associationId]
+        );
+        const memberRelation = rows[0];
+
+        if (!memberRelation) {
+            return res.status(404).json({ message: 'Adhésion introuvable.' });
+        }
+
+        if (memberRelation.payment_status === 'validated') {
+            return res.status(400).json({ message: 'Cette cotisation a déjà été validée.' });
+        }
+
+        // 2. Valider le paiement de la cotisation
+        await pool.execute(
+            'UPDATE association_members SET payment_status = \'validated\' WHERE user_id = ? AND association_id = ?',
+            [targetUserId, associationId]
+        );
+
+        // 3. Enregistrer la commission plateforme (5%)
+        if (memberRelation.price_applied > 0) {
+            const rate = 5.00;
+            const amount = (memberRelation.price_applied * rate) / 100;
+            
+            await pool.execute(
+                'INSERT INTO commissions (association_id, membership_id, type, amount, rate) VALUES (?, ?, ?, ?, ?)',
+                [associationId, memberRelation.id, 'membership', amount, rate]
+            );
+        }
+
+        res.status(200).json({ message: 'Paiement de la cotisation validé avec succès.' });
+    } catch (error) {
+        console.error('Erreur validateMembershipPayment:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+};
+
 module.exports = {
     getAssociationMembers,
     removeMember,
     getAssociationFinances,
     getMyAssociationDetail,
     getPendingMembers,
-    approveMember
+    approveMember,
+    updateAssociationSettings,
+    validateMembershipPayment
 };

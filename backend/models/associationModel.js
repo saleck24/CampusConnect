@@ -41,7 +41,7 @@ const create = async (name, description, logoUrl, objectives, membershipConditio
 // Récupérer toutes les associations validées
 const getAllValidated = async () => {
     const [rows] = await pool.execute(
-        'SELECT id, name, description, logo_url, plan, created_at FROM associations WHERE is_validated = true ORDER BY name ASC'
+        'SELECT id, name, description, logo_url, plan, premium_until, membership_fee, created_at FROM associations WHERE is_validated = true ORDER BY name ASC'
     );
     return rows;
 };
@@ -66,9 +66,19 @@ const requestMembership = async (userId, associationId) => {
     );
     if (existing.length > 0) return false;
 
+    // Récupérer l'association pour voir s'il y a une cotisation
+    const [assoRows] = await pool.execute(
+        'SELECT plan, membership_fee FROM associations WHERE id = ?',
+        [associationId]
+    );
+    const association = assoRows[0];
+    
+    const fee = (association && association.plan === 'premium') ? (association.membership_fee || 0) : 0;
+    const paymentStatus = fee > 0 ? 'pending' : 'free';
+
     const [result] = await pool.execute(
-        'INSERT INTO association_members (user_id, association_id, status) VALUES (?, ?, ?)',
-        [userId, associationId, 'pending']
+        'INSERT INTO association_members (user_id, association_id, status, price_applied, payment_status) VALUES (?, ?, ?, ?, ?)',
+        [userId, associationId, 'pending', fee, paymentStatus]
     );
     return result.insertId;
 };
@@ -138,6 +148,35 @@ const getUserMemberships = async (userId) => {
     return rows;
 };
 
+// Activer / Renouveler l'abonnement Premium pour 30 jours
+const upgradeToPremium = async (id) => {
+    const [rows] = await pool.execute('SELECT plan, premium_until FROM associations WHERE id = ?', [id]);
+    const association = rows[0];
+    if (!association) return null;
+
+    let newPremiumUntil;
+    const now = new Date();
+    
+    if (association.premium_until && new Date(association.premium_until) > now) {
+        const currentUntil = new Date(association.premium_until);
+        currentUntil.setDate(currentUntil.getDate() + 30);
+        newPremiumUntil = currentUntil;
+    } else {
+        const until = new Date();
+        until.setDate(until.getDate() + 30);
+        newPremiumUntil = until;
+    }
+
+    const formattedUntil = newPremiumUntil.toISOString().slice(0, 19).replace('T', ' ');
+
+    await pool.execute(
+        "UPDATE associations SET plan = 'premium', premium_until = ? WHERE id = ?",
+        [formattedUntil, id]
+    );
+
+    return formattedUntil;
+};
+
 module.exports = {
     create,
     getAllValidated,
@@ -147,5 +186,6 @@ module.exports = {
     refuseAssociation,
     getUserAssociationId,
     requestMembership,
-    getUserMemberships
+    getUserMemberships,
+    upgradeToPremium
 };

@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS `associations` (
   `membership_conditions` text COLLATE utf8mb4_unicode_ci,
   `is_validated` tinyint(1) DEFAULT '0',
   `plan` enum('free','premium') COLLATE utf8mb4_unicode_ci DEFAULT 'free',
+  `membership_fee` decimal(10,2) DEFAULT '0.00',
+  `premium_until` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -49,6 +51,8 @@ CREATE TABLE IF NOT EXISTS `association_members` (
   `user_id` int NOT NULL,
   `association_id` int NOT NULL,
   `status` enum('pending','approved','refused') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
+  `price_applied` decimal(10,2) DEFAULT '0.00',
+  `payment_status` enum('pending','validated','free') COLLATE utf8mb4_unicode_ci DEFAULT 'free',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_assoc_members_user` (`user_id`),
@@ -136,6 +140,23 @@ CREATE TABLE IF NOT EXISTS `commissions` (
   CONSTRAINT `commissions_ibfk_1` FOREIGN KEY (`association_id`) REFERENCES `associations` (`id`) ON DELETE CASCADE,
   CONSTRAINT `commissions_ibfk_2` FOREIGN KEY (`registration_id`) REFERENCES `registrations` (`id`) ON DELETE SET NULL,
   CONSTRAINT `commissions_ibfk_3` FOREIGN KEY (`membership_id`) REFERENCES `association_members` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================================
+-- Structure de la table `sponsors`
+-- ========================================================
+
+CREATE TABLE IF NOT EXISTS `sponsors` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(150) NOT NULL,
+  `logo_url` VARCHAR(255) NULL,
+  `website_url` VARCHAR(255) NULL,
+  `amount_paid` DECIMAL(10,2) DEFAULT 5000.00,
+  `start_date` DATE NOT NULL,
+  `end_date` DATE NOT NULL,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 COMMIT;

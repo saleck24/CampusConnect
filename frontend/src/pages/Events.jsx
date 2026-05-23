@@ -77,91 +77,134 @@ const Events = () => {
                     <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Aucun événement prévu</h3>
                     <p style={{ color: 'var(--ink3)' }}>Revenez plus tard pour découvrir les prochaines activités !</p>
                 </div>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-                    {events.map((event) => {
-                        const eventDate = new Date(event.date);
-                        const day = eventDate.getDate();
-                        const month = eventDate.toLocaleString('fr-FR', { month: 'short' }).replace('.', '');
-                        
-                        return (
-                            <div key={event.id} className="ecard flex flex-column">
-                                {/* Visual Top */}
-                                <div style={{ 
-                                    height: '140px', 
-                                    background: event.is_paid ? 'var(--amber)' : 'var(--indigo-light)',
-                                    opacity: 0.9,
-                                    position: 'relative',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '48px'
-                                }}>
-                                    {event.is_paid ? '🏆' : '💻'}
-                                    <div style={{ 
-                                        position: 'absolute', top: '12px', left: '12px', 
-                                        background: '#fff', borderRadius: '10px', padding: '6px 10px',
-                                        textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+            ) : (() => {
+                const premiumEvents = events.filter(e => e.association_plan === 'premium');
+                const regularEvents = events.filter(e => e.association_plan !== 'premium');
+                
+                const renderEventCard = (event) => {
+                    const eventDate = new Date(event.date);
+                    const day = eventDate.getDate();
+                    const month = eventDate.toLocaleString('fr-FR', { month: 'short' }).replace('.', '');
+                    const isPremium = event.association_plan === 'premium';
+                    
+                    return (
+                        <div key={event.id} className="ecard flex flex-column" style={isPremium ? {
+                            border: '2px solid var(--indigo)',
+                            boxShadow: '0 8px 30px rgba(79, 70, 229, 0.08)',
+                            position: 'relative'
+                        } : {}}>
+                            {/* Visual Top */}
+                            <div style={{ 
+                                height: '140px', 
+                                background: event.is_paid ? 'var(--amber)' : 'var(--indigo-light)',
+                                opacity: 0.9,
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '48px'
+                            }}>
+                                {event.is_paid ? '🏆' : '💻'}
+                                {isPremium && (
+                                    <div style={{
+                                        position: 'absolute', top: '12px', right: '12px',
+                                        background: 'var(--indigo)', color: '#fff', borderRadius: '8px',
+                                        padding: '4px 10px', fontSize: '9px', fontWeight: '800',
+                                        textTransform: 'uppercase', letterSpacing: '0.5px',
+                                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
                                     }}>
-                                        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>{day}</div>
-                                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase' }}>{month}</div>
+                                        À la une
                                     </div>
-                                </div>
-
-                                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--indigo)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                            {event.association_name}
-                                        </div>
-                                        <div style={{ 
-                                            padding: '4px 10px', borderRadius: 'var(--r3)', fontSize: '10px', fontWeight: 700,
-                                            background: event.is_paid ? '#fef3c7' : '#d1fae5',
-                                            color: event.is_paid ? '#92400e' : '#065f46',
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            {event.is_paid ? `${event.guest_price} MRU` : 'Gratuit'}
-                                        </div>
-                                    </div>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', lineHeight: 1.4 }}>
-                                        {event.title}
-                                    </h3>
-                                    
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                                        <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--ink3)' }}>
-                                            <MapPin size={14} className="text-indigo" />
-                                            <span>{event.location}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--ink3)' }}>
-                                            <Calendar size={14} className="text-indigo" />
-                                            <span>{eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                        <button 
-                                            className="btn btn-primary" 
-                                            style={{ flex: 1, padding: '8px 16px', fontSize: '13px' }}
-                                            onClick={() => handleRegister(event)}
-                                            disabled={registering === event.id}
-                                        >
-                                            {registering === event.id ? 'Inscription...' : "S'inscrire"}
-                                        </button>
-                                        
-                                        <Link 
-                                            to={`/events/${event.id}`} 
-                                            className="btn btn-ghost"
-                                            style={{ padding: '8px' }}
-                                            title="Plus d'infos"
-                                        >
-                                            <ArrowRight size={18} />
-                                        </Link>
-                                    </div>
+                                )}
+                                <div style={{ 
+                                    position: 'absolute', top: '12px', left: '12px', 
+                                    background: '#fff', borderRadius: '10px', padding: '6px 10px',
+                                    textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                }}>
+                                    <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>{day}</div>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase' }}>{month}</div>
                                 </div>
                             </div>
-                        );
-                    })}
-                </div>
-            )}
+
+                            <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--indigo)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        {event.association_name}
+                                    </div>
+                                    <div style={{ 
+                                        padding: '4px 10px', borderRadius: 'var(--r3)', fontSize: '10px', fontWeight: 700,
+                                        background: event.is_paid ? '#fef3c7' : '#d1fae5',
+                                        color: event.is_paid ? '#92400e' : '#065f46',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {event.is_paid ? `${event.guest_price} MRU` : 'Gratuit'}
+                                    </div>
+                                </div>
+                                <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', lineHeight: 1.4 }}>
+                                    {event.title}
+                                </h3>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                                    <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--ink3)' }}>
+                                        <MapPin size={14} className="text-indigo" />
+                                        <span>{event.location}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--ink3)' }}>
+                                        <Calendar size={14} className="text-indigo" />
+                                        <span>{eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                    <button 
+                                        className="btn btn-primary" 
+                                        style={{ flex: 1, padding: '8px 16px', fontSize: '13px' }}
+                                        onClick={() => handleRegister(event)}
+                                        disabled={registering === event.id}
+                                    >
+                                        {registering === event.id ? 'Inscription...' : "S'inscrire"}
+                                    </button>
+                                    
+                                    <Link 
+                                        to={`/events/${event.id}`} 
+                                        className="btn btn-ghost"
+                                        style={{ padding: '8px' }}
+                                        title="Plus d'infos"
+                                    >
+                                        <ArrowRight size={18} />
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                };
+
+                return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+                        {premiumEvents.length > 0 && (
+                            <div>
+                                <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '20px', color: 'var(--indigo)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    ⭐ Événements à la une
+                                </h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+                                    {premiumEvents.map(event => renderEventCard(event))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div>
+                            {premiumEvents.length > 0 && (
+                                <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '20px', color: 'var(--ink)' }}>
+                                    Tous les événements
+                                </h2>
+                            )}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+                                {regularEvents.map(event => renderEventCard(event))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
 
         {/* Modal inscription invité */}

@@ -78,3 +78,5 @@ app.listen(PORT, () => {
     const { initCronJobs } = require('./utils/cronJobs');
     initCronJobs();
 });
+
+module.exports = app;

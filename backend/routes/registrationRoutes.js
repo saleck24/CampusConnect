@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const registrationController = require('../controllers/registrationController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
+const upload = require('../middlewares/uploadMiddleware');
 
 /**
  * @swagger
@@ -22,4 +23,29 @@ const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
  */
 router.put('/:id/validate', requireAuth, requireRole(['responsable', 'admin']), registrationController.validatePayment);
 
+/**
+ * @swagger
+ * /api/registrations/{id}/proof:
+ *   post:
+ *     summary: Télécharger une preuve de paiement (Connecté ou Anonyme)
+ *     tags: [Events]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               proof: { type: string, format: binary }
+ *     responses:
+ *       200:
+ *         description: Preuve enregistrée.
+ */
+router.post('/:id/proof', upload.single('proof'), registrationController.uploadPaymentProof);
+
 module.exports = router;
+

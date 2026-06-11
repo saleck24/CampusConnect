@@ -72,12 +72,24 @@ router.get(
  *   get:
  *     summary: Détails de l'association gérée (Responsable/Admin)
  *     tags: [Association Management]
+ *   put:
+ *     summary: "Mettre à jour le profil de l'association (US12)"
+ *     tags: [Association Management]
+ *     security: [{ bearerAuth: [] }]
  */
 router.get(
     '/my-association',
     requireAuth,
     requireRole(['responsable', 'admin']),
     associationManagementController.getMyAssociationDetail
+);
+
+router.put(
+    '/my-association',
+    requireAuth,
+    requireRole(['responsable', 'admin']),
+    upload.single('logo'),
+    associationManagementController.updateMyAssociation
 );
 
 /**

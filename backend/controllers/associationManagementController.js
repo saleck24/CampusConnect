@@ -257,6 +257,51 @@ const validateMembershipPayment = async (req, res) => {
     }
 };
 
+/**
+ * Met à jour les détails de l'association du responsable connecté (US12)
+ */
+const updateMyAssociation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const associationId = await associationModel.getUserAssociationId(userId);
+
+        if (!associationId) {
+            return res.status(403).json({ message: 'Vous ne gérez aucune association.' });
+        }
+
+        const { name, description, objectives, membership_conditions } = req.body;
+        
+        let logo_url = undefined;
+        if (req.file) {
+            logo_url = '/uploads/' + req.file.filename;
+        }
+
+        const updates = [];
+        const values = [];
+
+        if (name) { updates.push('name = ?'); values.push(name); }
+        if (description) { updates.push('description = ?'); values.push(description); }
+        if (objectives) { updates.push('objectives = ?'); values.push(objectives); }
+        if (membership_conditions) { updates.push('membership_conditions = ?'); values.push(membership_conditions); }
+        if (logo_url) { updates.push('logo_url = ?'); values.push(logo_url); }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ message: 'Aucun champ à modifier.' });
+        }
+
+        values.push(associationId);
+        await pool.execute(
+            `UPDATE associations SET ${updates.join(', ')} WHERE id = ?`,
+            values
+        );
+
+        res.status(200).json({ message: 'Profil de l\'association mis à jour avec succès.' });
+    } catch (error) {
+        console.error('Erreur updateMyAssociation:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+};
+
 module.exports = {
     getAssociationMembers,
     removeMember,
@@ -265,5 +310,6 @@ module.exports = {
     getPendingMembers,
     approveMember,
     updateAssociationSettings,
-    validateMembershipPayment
+    validateMembershipPayment,
+    updateMyAssociation
 };

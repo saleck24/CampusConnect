@@ -68,6 +68,37 @@ const validatePayment = async (req, res) => {
     }
 };
 
+const uploadPaymentProof = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun fichier téléchargé.' });
+        }
+
+        const proofUrl = '/uploads/' + req.file.filename;
+
+        // Mise à jour de la table registrations
+        const [result] = await pool.execute(
+            'UPDATE registrations SET payment_proof_url = ? WHERE id = ?',
+            [proofUrl, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Inscription introuvable.' });
+        }
+
+        res.status(200).json({ 
+            message: 'Preuve de paiement téléchargée avec succès.',
+            proof_url: proofUrl 
+        });
+    } catch (error) {
+        console.error('Erreur uploadPaymentProof:', error);
+        res.status(500).json({ message: 'Erreur lors du téléchargement de la preuve.' });
+    }
+};
+
 module.exports = {
-    validatePayment
+    validatePayment,
+    uploadPaymentProof
 };

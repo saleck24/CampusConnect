@@ -1,16 +1,21 @@
 const pool = require('../config/db');
+const { encrypt, decrypt } = require('../utils/encryption');
 
 // Trouver un utilisateur par son email
 const findByEmail = async (email) => {
     const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
+    if (rows[0] && rows[0].phone) {
+        rows[0].phone = decrypt(rows[0].phone);
+    }
     return rows[0];
 };
 
 // Créer un utilisateur
 const create = async (name, email, phone, hashedPassword, role = 'etudiant') => {
+    const encryptedPhone = encrypt(phone);
     const [result] = await pool.execute(
         'INSERT INTO users (name, email, phone, password, role, is_active) VALUES (?, ?, ?, ?, ?, ?)',
-        [name, email, phone, hashedPassword, role, false]
+        [name, email, encryptedPhone, hashedPassword, role, false]
     );
     return result.insertId;
 };
@@ -23,6 +28,9 @@ const activateUser = async (id) => {
 
 const findById = async (id) => {
      const [rows] = await pool.execute('SELECT id, name, email, phone, role, is_active, created_at FROM users WHERE id = ?', [id]);
+     if (rows[0] && rows[0].phone) {
+         rows[0].phone = decrypt(rows[0].phone);
+     }
      return rows[0];
 }
 

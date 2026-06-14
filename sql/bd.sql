@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS `associations` (
   `plan` enum('free','premium') COLLATE utf8mb4_unicode_ci DEFAULT 'free',
   `membership_fee` decimal(10,2) DEFAULT '0.00',
   `premium_until` timestamp NULL DEFAULT NULL,
+  `type` enum('ONG','CLUB','STUDENT_CREATED') COLLATE utf8mb4_unicode_ci DEFAULT 'CLUB',
+  `commission_percent` tinyint UNSIGNED NOT NULL DEFAULT 10,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -50,9 +52,10 @@ CREATE TABLE IF NOT EXISTS `association_members` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
   `association_id` int NOT NULL,
-  `status` enum('pending','approved','refused') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
+  `status` enum('pending','pending_payment','awaiting_validation','validated','approved','refused') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
   `price_applied` decimal(10,2) DEFAULT '0.00',
   `payment_status` enum('pending','validated','free') COLLATE utf8mb4_unicode_ci DEFAULT 'free',
+  `payment_proof_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_assoc_members_user` (`user_id`),
@@ -83,6 +86,37 @@ CREATE TABLE IF NOT EXISTS `events` (
   KEY `idx_events_association` (`association_id`),
   CONSTRAINT `events_ibfk_1` FOREIGN KEY (`association_id`) REFERENCES `associations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================================
+-- Table des dons
+CREATE TABLE IF NOT EXISTS `donations` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `association_id` int NOT NULL,
+  `donor_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `donor_email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `message` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_donations_assoc` (`association_id`),
+  CONSTRAINT `donations_ibfk_1` FOREIGN KEY (`association_id`) REFERENCES `associations` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================================
+-- Contributions des membres (preuve de paiement)
+CREATE TABLE IF NOT EXISTS `member_contributions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `membership_id` int NOT NULL,
+  `proof_url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('pending','validated','rejected') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_member_contrib_mem` (`membership_id`),
+  CONSTRAINT `member_contributions_ibfk_1` FOREIGN KEY (`membership_id`) REFERENCES `association_members` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- ========================================================
+
+
 
 -- ========================================================
 -- Structure de la table `registrations`

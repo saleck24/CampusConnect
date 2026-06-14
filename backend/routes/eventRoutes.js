@@ -24,6 +24,9 @@ router.get('/', eventController.getEvents);
  */
 router.get('/featured', eventController.getFeaturedEvents);
 
+// Route temporaire pour déclencher manuellement la tâche cron de rappel d'événement
+router.get('/test/run-reminder-cron', eventController.runReminderCronTest);
+
 /**
  * @swagger
  * /api/events/detail/{id}:

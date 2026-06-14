@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
     Building2, Users, Calendar, CheckCircle2, XCircle, 
-    UserCog, ShieldCheck, Mail, AlertCircle, Trash2, Wallet, Edit3, Plus, ExternalLink
+    UserCog, ShieldCheck, Mail, AlertCircle, Trash2, Wallet, Edit3, Plus, ExternalLink, Eye, Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -18,6 +18,7 @@ const AdminPanel = () => {
     const [logoFile, setLogoFile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
+    const [confirmModal, setConfirmModal] = useState({ visible: false, message: '', onConfirm: null });
 
     useEffect(() => {
         loadData();
@@ -97,27 +98,39 @@ const AdminPanel = () => {
     };
 
     const handleDeleteEvent = async (id) => {
-        if (!window.confirm("Annuler définitivement cet événement ?")) return;
-        try {
-            await api.delete(`events/${id}`);
-            setEvents(events.filter(e => e.id !== id));
-            setStatusMsg({ type: 'success', text: 'Événement annulé.' });
-        } catch (error) {
-            setStatusMsg({ type: 'error', text: 'Erreur lors de la suppression.' });
-        }
+        setConfirmModal({
+            visible: true,
+            message: "Annuler définitivement cet événement ?",
+            onConfirm: async () => {
+                try {
+                    await api.delete(`events/${id}`);
+                    setEvents(events.filter(e => e.id !== id));
+                    setStatusMsg({ type: 'success', text: 'Événement annulé.' });
+                } catch (error) {
+                    setStatusMsg({ type: 'error', text: 'Erreur lors de la suppression.' });
+                }
+                setConfirmModal({ visible: false, message: '', onConfirm: null });
+            }
+        });
     };
 
     const handleUpgradeAsso = async (id) => {
-        if (!window.confirm("Confirmer la mise à niveau de cette association vers le Plan Premium pour 30 jours ?")) return;
-        try {
-            const res = await api.post(`associations/admin/upgrade/${id}`);
-            setStatusMsg({ type: 'success', text: res.data.message });
-            // Recharger les associations
-            const associationsRes = await api.get('associations');
-            setAssociations(associationsRes.data);
-        } catch (error) {
-            setStatusMsg({ type: 'error', text: error.response?.data?.message || 'Erreur lors de la mise à niveau.' });
-        }
+        setConfirmModal({
+            visible: true,
+            message: "Êtes-vous sûr de vouloir valider ce paiement ? Cela activera ou prolongera le Plan Premium de cette association pour 30 jours.",
+            onConfirm: async () => {
+                try {
+                    const res = await api.post(`associations/admin/upgrade/${id}`);
+                    setStatusMsg({ type: 'success', text: res.data.message });
+                    // Recharger les associations
+                    const associationsRes = await api.get('associations');
+                    setAssociations(associationsRes.data);
+                } catch (error) {
+                    setStatusMsg({ type: 'error', text: error.response?.data?.message || 'Erreur lors de la mise à niveau.' });
+                }
+                setConfirmModal({ visible: false, message: '', onConfirm: null });
+            }
+        });
     };
 
     const handleSaveSponsor = async (e) => {
@@ -158,14 +171,20 @@ const AdminPanel = () => {
     };
 
     const handleDeleteSponsor = async (id) => {
-        if (!window.confirm("Supprimer définitivement ce sponsor ?")) return;
-        try {
-            await api.delete(`sponsors/${id}`);
-            setSponsors(sponsors.filter(s => s.id !== id));
-            setStatusMsg({ type: 'success', text: 'Sponsor supprimé.' });
-        } catch (error) {
-            setStatusMsg({ type: 'error', text: 'Erreur lors de la suppression.' });
-        }
+        setConfirmModal({
+            visible: true,
+            message: "Supprimer définitivement ce sponsor ?",
+            onConfirm: async () => {
+                try {
+                    await api.delete(`sponsors/${id}`);
+                    setSponsors(sponsors.filter(s => s.id !== id));
+                    setStatusMsg({ type: 'success', text: 'Sponsor supprimé.' });
+                } catch (error) {
+                    setStatusMsg({ type: 'error', text: 'Erreur lors de la suppression.' });
+                }
+                setConfirmModal({ visible: false, message: '', onConfirm: null });
+            }
+        });
     };
 
     return (
@@ -283,6 +302,11 @@ const AdminPanel = () => {
                                                 <div style={{ flex: 1 }}>
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <h4 style={{ margin: 0, fontWeight: '700' }}>{req.name}</h4>
+                                                        {req.type === 'ONG' ? (
+                                                            <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(5, 150, 105, 0.1)', color: '#059669', borderRadius: '6px', fontWeight: '800' }}>🌱 ONG</span>
+                                                        ) : (
+                                                            <span style={{ fontSize: '11px', padding: '2px 8px', background: 'var(--surf3)', color: 'var(--ink2)', borderRadius: '6px', fontWeight: '800' }}>🎓 CLUB</span>
+                                                        )}
                                                         <span style={{ fontSize: '11px', padding: '2px 8px', background: 'var(--indigo-light)', color: 'var(--indigo)', borderRadius: '99px', fontWeight: '700' }}>EN ATTENTE</span>
                                                     </div>
                                                     <p style={{ fontSize: '14px', color: 'var(--ink3)', lineHeight: '1.5' }}>{req.description}</p>
@@ -708,6 +732,7 @@ const AdminPanel = () => {
                                                 <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>ASSOCIATION</th>
                                                 <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>PLAN ACTUEL</th>
                                                 <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>VALABLE JUSQU'AU</th>
+                                                <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>PREUVE</th>
                                                 <th style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--ink3)', fontWeight: '700' }}>ACTIONS</th>
                                             </tr>
                                         </thead>
@@ -755,13 +780,48 @@ const AdminPanel = () => {
                                                                     <span style={{ color: 'var(--ink3)' }}>—</span>
                                                                 )}
                                                             </td>
+                                                            <td style={{ padding: '16px 24px', borderRight: '1px solid var(--borderl)', textAlign: 'center' }}>
+                                                                {asso.payment_status === 'EN_ATTENTE' ? (
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                                                        <span style={{ fontSize: '11px', color: 'var(--amber)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                            <Clock size={12} /> En attente
+                                                                        </span>
+                                                                        {asso.payment_proof_url && (
+                                                                            <a
+                                                                                href={`http://localhost:5000${asso.payment_proof_url}`}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="btn btn-secondary"
+                                                                                style={{ padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                            >
+                                                                                <Eye size={12} /> Voir
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                ) : asso.payment_status === 'PAYE' ? (
+                                                                    <span style={{ fontSize: '11px', color: 'var(--teal)', fontWeight: '700' }}>Payé</span>
+                                                                ) : (
+                                                                    <span style={{ fontSize: '11px', color: 'var(--ink3)' }}>—</span>
+                                                                )}
+                                                            </td>
                                                             <td style={{ padding: '16px 24px' }}>
                                                                 <button
                                                                     onClick={() => handleUpgradeAsso(asso.id)}
-                                                                    className="btn btn-primary"
-                                                                    style={{ padding: '8px 16px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                                    className={`btn ${asso.payment_status === 'EN_ATTENTE' ? '' : 'btn-primary'}`}
+                                                                    style={{ 
+                                                                        padding: '8px 16px', 
+                                                                        fontSize: '12px', 
+                                                                        fontWeight: '700', 
+                                                                        display: 'flex', 
+                                                                        alignItems: 'center', 
+                                                                        gap: '6px',
+                                                                        background: asso.payment_status === 'EN_ATTENTE' ? 'linear-gradient(135deg, #10B981, #059669)' : undefined,
+                                                                        color: '#fff',
+                                                                        boxShadow: asso.payment_status === 'EN_ATTENTE' ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none',
+                                                                        border: 'none'
+                                                                    }}
                                                                 >
-                                                                    <ShieldCheck size={14} /> {hasPremium ? 'Renouveler (+30j)' : 'Activer Premium'}
+                                                                    <ShieldCheck size={14} /> {asso.payment_status === 'EN_ATTENTE' ? 'Valider le paiement' : (hasPremium ? 'Renouveler (+30j)' : 'Activer Premium')}
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -776,6 +836,37 @@ const AdminPanel = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modal de Confirmation */}
+            {confirmModal.visible && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="animate-fade-in" style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '24px', width: '90%', maxWidth: '400px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width: '64px', height: '64px', backgroundColor: 'var(--amber-light)', color: 'var(--amber)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                            <AlertCircle size={32} />
+                        </div>
+                        <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '16px' }}>Confirmation</h3>
+                        <p style={{ color: 'var(--ink3)', marginBottom: '32px', lineHeight: 1.5 }}>
+                            {confirmModal.message}
+                        </p>
+                        <div className="flex gap-3 justify-center">
+                            <button 
+                                className="btn btn-secondary" 
+                                onClick={() => setConfirmModal({ visible: false, message: '', onConfirm: null })}
+                                style={{ flex: 1 }}
+                            >
+                                Annuler
+                            </button>
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={confirmModal.onConfirm}
+                                style={{ flex: 1 }}
+                            >
+                                Confirmer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

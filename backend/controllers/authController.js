@@ -7,7 +7,7 @@ const emailService = require('../utils/emailService');
 // Inscription
 const register = async (req, res) => {
     try {
-        const { name, email, phone, password, role } = req.body;
+        const { name, email, phone, password, role, asso_name, asso_type, asso_description, asso_objectives } = req.body;
 
         // Validation basique
         if (!name || !email || !phone || !password) {
@@ -15,6 +15,11 @@ const register = async (req, res) => {
         }
         if (password.length < 8) {
             return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères.' });
+        }
+
+        // Si Responsable, l'asso_name est obligatoire
+        if (role === 'responsable' && !asso_name) {
+            return res.status(400).json({ message: 'Le nom de votre association est requis pour un compte Responsable.' });
         }
 
         // Vérifier si l'utilisateur existe déjà
@@ -27,8 +32,21 @@ const register = async (req, res) => {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // Créer l'utilisateur
-        const userId = await userModel.create(name, email, phone, hashedPassword, role);
+        // Créer l'utilisateur (avec le rôle demandé)
+        const userId = await userModel.create(name, email, phone, hashedPassword, role || 'etudiant');
+
+        // Si Responsable : créer l'association liée (en attente de validation)
+        if (role === 'responsable' && asso_name) {
+            await associationModel.create(
+                asso_name,
+                asso_description || '',
+                null, // logo_url (pas encore de logo)
+                asso_objectives || '',
+                '',   // membership_conditions
+                userId,
+                asso_type || 'CLUB'
+            );
+        }
 
         // Créer un token d'activation (valable 1h)
         const activationToken = jwt.sign({ id: userId, email: email }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -49,7 +67,11 @@ const register = async (req, res) => {
         // On envoie en arrière plan, pas de problème s'il faillit c'est asynchrone mais on ne bloque pas pour autant
         emailService.sendEmail(email, 'Confirmez votre adresse email sur CampusConnect', emailHtml);
 
-        res.status(201).json({ message: 'Inscription réussie. Veuillez vérifier vos emails pour activer votre compte.' });
+        const message = role === 'responsable'
+            ? 'Compte Responsable créé ! Votre demande d\'association est en attente de validation. Vérifiez votre email pour activer votre compte.'
+            : 'Inscription réussie. Veuillez vérifier vos emails pour activer votre compte.';
+
+        res.status(201).json({ message });
     } catch (error) {
         console.error('Erreur lors de l\'inscription :', error);
         res.status(500).json({ message: 'Erreur serveur lors de l\'inscription.' });
@@ -176,7 +198,7 @@ const forgotPassword = async (req, res) => {
         
         emailService.sendEmail(user.email, 'Réinitialisation de votre mot de passe CampusConnect', emailHtml);
 
-        res.status(200).json({ message: 'Si cet email existe, un lien a été envoyé.' });
+        res.status(200).json({ message: 'Un lien de réinitialisation de mot de passe vient d\'être envoyé avec succès.' });
     } catch (error) {
         console.error('Erreur forgotPassword:', error);
         res.status(500).json({ message: 'Erreur serveur.' });

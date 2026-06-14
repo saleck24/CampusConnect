@@ -3,16 +3,16 @@ const pool = require('../config/db');
 // --- Côté Utilisateur / Demandeur ---
 
 // Créer une demande d'association
-const create = async (name, description, logoUrl, objectives, membershipConditions, userId) => {
+const create = async (name, description, logoUrl, objectives, membershipConditions, userId, type = 'CLUB') => {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
         // 1. Créer l'association (non validée par défaut)
         const [assoResult] = await connection.execute(
-            `INSERT INTO associations (name, description, logo_url, objectives, membership_conditions, is_validated, plan)
-             VALUES (?, ?, ?, ?, ?, false, 'free')`,
-            [name, description, logoUrl, objectives, membershipConditions]
+            `INSERT INTO associations (name, description, logo_url, objectives, membership_conditions, is_validated, plan, type)
+             VALUES (?, ?, ?, ?, ?, false, 'free', ?)`,
+            [name, description, logoUrl, objectives, membershipConditions, type]
         );
         
         const associationId = assoResult.insertId;
@@ -74,13 +74,14 @@ const requestMembership = async (userId, associationId) => {
     const association = assoRows[0];
     
     const fee = (association && association.plan === 'premium') ? (association.membership_fee || 0) : 0;
-    const paymentStatus = fee > 0 ? 'pending' : 'free';
-
+    // Use status 'pending' for both paid and free (admin will approve later)
+    const status = fee > 0 ? 'pending' : 'active';
     const [result] = await pool.execute(
-        'INSERT INTO association_members (user_id, association_id, status, price_applied, payment_status) VALUES (?, ?, ?, ?, ?)',
-        [userId, associationId, 'pending', fee, paymentStatus]
+      'INSERT INTO association_members (user_id, association_id, status, price_applied) VALUES (?, ?, ?, ?)',
+      [userId, associationId, status, fee]
     );
-    return result.insertId;
+    // Return an object so the controller can decide whether to show the payment modal
+    return { insertId: result.insertId, fee, needsProof: fee > 0 };
 };
 
 // Lister toutes les demandes non validées

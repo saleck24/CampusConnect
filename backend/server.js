@@ -40,6 +40,7 @@ const statsRoutes = require('./routes/statsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 const sponsorRoutes = require('./routes/sponsorRoutes');
+const donationRoutes = require('./routes/donationRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/associations', associationRoutes);
@@ -49,6 +50,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/sponsors', sponsorRoutes);
+app.use('/api/donations', donationRoutes);
 
 // Routes de test
 app.get('/', (req, res) => {

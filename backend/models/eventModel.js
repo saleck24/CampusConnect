@@ -131,13 +131,15 @@ const isGuestRegistered = async (guest_email, event_id) => {
 const getParticipants = async (eventId) => {
     const [rows] = await pool.execute(`
         SELECT 
+            r.id as registration_id,
             COALESCE(u.id, 0) as id,
             COALESCE(u.name, r.guest_name) as name,
             COALESCE(u.email, r.guest_email) as email,
             COALESCE(u.phone, r.guest_phone) as phone,
             r.created_at as registered_at, 
             r.price_applied,
-            r.payment_status
+            r.payment_status,
+            r.payment_proof_url
         FROM registrations r
         LEFT JOIN users u ON r.user_id = u.id
         WHERE r.event_id = ?

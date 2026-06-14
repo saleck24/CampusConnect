@@ -21,6 +21,10 @@ const upload = require('../middlewares/uploadMiddleware');
  */
 router.get('/', associationController.getPublicAssociations);
 
+// Routes temporaires pour tester manuellement le cron d'expiration Premium
+router.get('/test/setup-premium-expiration', associationController.setupPremiumExpirationTest);
+router.get('/test/run-premium-cron', associationController.runPremiumCronTest);
+
 /**
  * @swagger
  * /api/associations/request:
@@ -230,7 +234,7 @@ router.post(
  * @swagger
  * /api/associations/admin/upgrade/{id}:
  *   post:
- *     summary: Passer une association au plan premium pour 30 jours (Admin uniquement)
+ *     summary: Valider le paiement et passer une association au plan premium pour 30 jours (Admin uniquement)
  *     tags: [Admin]
  */
 router.post(
@@ -239,6 +243,21 @@ router.post(
     requireRole(['admin']),
     associationController.upgradeAssociation
 );
+
+/**
+ * @swagger
+ * /api/associations/{id}/premium-proof:
+ *   post:
+ *     summary: Uploader la preuve de paiement pour passer au plan Premium
+ *     tags: [Associations]
+ */
+router.post(
+    '/:id/premium-proof',
+    requireAuth,
+    upload.single('proof'),
+    associationController.uploadPremiumProof
+);
+
 
 /**
  * @swagger

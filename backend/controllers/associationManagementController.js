@@ -127,10 +127,10 @@ const getPendingMembers = async (req, res) => {
         }
 
         const [rows] = await pool.execute(`
-            SELECT u.id, u.name, u.email, u.phone, am.created_at as requested_at
+            SELECT u.id, u.name, u.email, u.phone, am.created_at as requested_at, am.status, am.payment_status, am.payment_proof_url
             FROM association_members am
             JOIN users u ON am.user_id = u.id
-            WHERE am.association_id = ? AND am.status = 'pending'
+            WHERE am.association_id = ? AND am.status IN ('pending', 'pending_payment')
             ORDER BY am.created_at DESC
         `, [associationId]);
 
@@ -152,19 +152,33 @@ const approveMember = async (req, res) => {
 
         if (!associationId) return res.status(403).json({ message: 'Non autorisé.' });
 
+        // Log des paramètres pour le debug
+        console.log('approveMember: targetUserId', targetUserId, 'managerId', managerId, 'associationId', associationId);
+
+        // Update the membership regardless of its current status, marking it as approved.
+        // If the payment_status is still pending, mark it as validated.
         const [result] = await pool.execute(
-            'UPDATE association_members SET status = \'approved\' WHERE user_id = ? AND association_id = ? AND status = \'pending\'',
+            `UPDATE association_members 
+             SET status = 'approved',
+                 payment_status = CASE 
+                                   WHEN payment_status = 'pending' THEN 'validated' 
+                                   ELSE payment_status 
+                                 END
+             WHERE user_id = ? 
+               AND association_id = ?`,
             [targetUserId, associationId]
         );
 
+        console.log('approveMember: affectedRows', result.affectedRows);
+        
         if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Demande introuvable ou déjà traitée.' });
+            return res.status(404).json({ message: 'Demande introuvable ou déjà traitée.', details: result });
         }
 
         res.status(200).json({ message: 'Adhésion approuvée avec succès.' });
     } catch (error) {
-        console.error('Erreur approveMember:', error);
-        res.status(500).json({ message: 'Erreur serveur.' });
+        console.error('Erreur approveMember:', error.message, error.stack);
+        res.status(500).json({ message: 'Erreur serveur.', detail: error.message });
     }
 };
 

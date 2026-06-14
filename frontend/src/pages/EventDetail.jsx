@@ -4,7 +4,8 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
     Calendar, MapPin, Users, Ticket, ArrowLeft, Loader2,
-    AlertCircle, CheckCircle, Edit2, Trash2, UserMinus, UserPlus
+    AlertCircle, CheckCircle, Edit2, Trash2, UserMinus, UserPlus,
+    UploadCloud, Clock, Eye
 } from 'lucide-react';
 
 const EventDetail = () => {
@@ -24,6 +25,12 @@ const EventDetail = () => {
     const [guestEmail, setGuestEmail] = useState('');
     const [guestSuccess, setGuestSuccess] = useState('');
 
+    // Preuve de paiement states
+    const [registration, setRegistration] = useState(null);
+    const [uploadingProof, setUploadingProof] = useState(false);
+    const [guestRegId, setGuestRegId] = useState(null);
+    const [guestProofUrl, setGuestProofUrl] = useState(null);
+
     // Edit mode state
     const [editing, setEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
@@ -40,6 +47,7 @@ const EventDetail = () => {
             setEvent(res.data.event);
             setRegistrationCount(res.data.registrationCount);
             setIsRegistered(res.data.isRegistered);
+            setRegistration(res.data.registration);
             setEditForm(res.data.event);
         } catch (err) {
             setError(err.response?.data?.message || "Événement introuvable.");
@@ -79,11 +87,14 @@ const EventDetail = () => {
                 }, 1000);
             }
 
+            const regId = response.data.registrationId;
             if (user) {
                 setIsRegistered(true);
+                fetchEvent();
             } else {
+                setGuestRegId(regId);
                 setGuestSuccess(event.is_paid 
-                    ? "Inscription enregistrée ! Redirection vers WhatsApp pour envoyer votre preuve de virement..." 
+                    ? "Inscription enregistrée ! Redirection vers WhatsApp pour envoyer votre preuve de virement, et veuillez également la charger ci-dessous." 
                     : "Inscription réussie ! Vous allez recevoir un email de confirmation.");
                 setGuestName('');
                 setGuestEmail('');
@@ -93,6 +104,34 @@ const EventDetail = () => {
             alert(err.response?.data?.message || "Erreur lors de l'inscription.");
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const handleProofUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('proof', file);
+        
+        setUploadingProof(true);
+        try {
+            const targetId = registration?.id || guestRegId;
+            const res = await api.post(`registrations/${targetId}/proof`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            alert('Preuve de paiement envoyée avec succès !');
+            if (user) {
+                fetchEvent();
+            } else {
+                setGuestProofUrl(res.data.proof_url);
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || "Erreur lors de l'envoi du fichier.");
+        } finally {
+            setUploadingProof(false);
         }
     };
 
@@ -268,17 +307,83 @@ const EventDetail = () => {
                         <p style={{ color: 'var(--color-text-muted)', lineHeight: 1.8 }}>{event.description || 'Aucune description fournie.'}</p>
                     </div>
 
-                    {/* Action Inscription */}
+                    {/* Action Inscription - Utilisateur connecté */}
                     {user && !isOwner && (
                         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
                             {isRegistered ? (
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2" style={{ color: 'var(--color-accent)', fontWeight: 600 }}>
-                                        <CheckCircle size={20} /> Vous êtes inscrit à cet événement
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2" style={{ color: 'var(--color-accent)', fontWeight: 600 }}>
+                                            <CheckCircle size={20} /> Vous êtes inscrit à cet événement
+                                        </div>
+                                        <button onClick={handleUnregister} disabled={actionLoading} className="btn btn-secondary flex items-center gap-2" style={{ color: 'var(--color-error)' }}>
+                                            <UserMinus size={16} /> {actionLoading ? '...' : 'Se désinscrire'}
+                                        </button>
                                     </div>
-                                    <button onClick={handleUnregister} disabled={actionLoading} className="btn btn-secondary flex items-center gap-2" style={{ color: 'var(--color-error)' }}>
-                                        <UserMinus size={16} /> {actionLoading ? '...' : 'Se désinscrire'}
-                                    </button>
+
+                                    {/* Section preuve de paiement - Utilisateur connecté */}
+                                    {event.is_paid && (
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)',
+                                            border: '1.5px solid #FCD34D',
+                                            borderRadius: '12px',
+                                            padding: '1.25rem',
+                                            marginTop: '0.5rem'
+                                        }}>
+                                            <h4 style={{ margin: '0 0 0.75rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Clock size={16} /> Preuve de paiement
+                                            </h4>
+
+                                            {registration?.payment_proof_url ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#78350F' }}>
+                                                        ✅ Preuve déposée. Le responsable la vérifiera prochainement.
+                                                    </p>
+                                                    <a
+                                                        href={`http://localhost:5000${registration.payment_proof_url}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="btn btn-secondary flex items-center gap-2"
+                                                        style={{ width: 'fit-content', color: '#D97706', fontSize: '0.85rem' }}
+                                                    >
+                                                        <Eye size={14} /> Voir mon reçu
+                                                    </a>
+                                                    <label style={{ cursor: 'pointer', fontSize: '0.8rem', color: '#92400E' }}>
+                                                        Remplacer le fichier :
+                                                        <input type="file" accept="image/*,.pdf" onChange={handleProofUpload} disabled={uploadingProof} style={{ display: 'block', marginTop: '4px' }} />
+                                                    </label>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#78350F' }}>
+                                                        Votre paiement est en attente de validation. Vous pouvez charger votre reçu ici pour accélérer le traitement.
+                                                    </p>
+                                                    <label style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '10px',
+                                                        padding: '0.75rem 1rem',
+                                                        background: '#fff',
+                                                        borderRadius: '8px',
+                                                        border: '1.5px dashed #FCD34D',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.9rem',
+                                                        color: '#92400E'
+                                                    }}>
+                                                        <UploadCloud size={20} color="#D97706" />
+                                                        {uploadingProof ? 'Envoi en cours...' : 'Choisir un reçu (image ou PDF)'}
+                                                        <input type="file" accept="image/*,.pdf" onChange={handleProofUpload} disabled={uploadingProof} style={{ display: 'none' }} />
+                                                    </label>
+                                                </div>
+                                            )}
+
+                                            {registration?.payment_status === 'PAYE' && (
+                                                <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: '#059669', fontWeight: 600 }}>
+                                                    ✅ Paiement validé par le responsable.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <button 
@@ -311,8 +416,60 @@ const EventDetail = () => {
                         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
                             <h4 style={{ marginBottom: '1rem' }}>S'inscrire en tant qu'invité</h4>
                             {guestSuccess ? (
-                                <div className="flex items-center gap-2" style={{ color: 'var(--color-accent)', fontWeight: 600, marginBottom: '1rem' }}>
-                                    <CheckCircle size={20} /> {guestSuccess}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div className="flex items-center gap-2" style={{ color: 'var(--color-accent)', fontWeight: 600 }}>
+                                        <CheckCircle size={20} /> {guestSuccess}
+                                    </div>
+
+                                    {/* Section preuve de paiement - Invité */}
+                                    {event.is_paid && guestRegId && (
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)',
+                                            border: '1.5px solid #FCD34D',
+                                            borderRadius: '12px',
+                                            padding: '1.25rem'
+                                        }}>
+                                            <h4 style={{ margin: '0 0 0.75rem', color: '#92400E', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Clock size={16} /> Charger votre preuve de paiement
+                                            </h4>
+                                            {guestProofUrl ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                    <p style={{ margin: 0, color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>✅ Reçu envoyé avec succès !</p>
+                                                    <a
+                                                        href={`http://localhost:5000${guestProofUrl}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="btn btn-secondary flex items-center gap-2"
+                                                        style={{ width: 'fit-content', color: '#D97706', fontSize: '0.85rem' }}
+                                                    >
+                                                        <Eye size={14} /> Voir mon reçu
+                                                    </a>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#78350F' }}>
+                                                        En plus du WhatsApp, déposez votre reçu directement sur CampusConnect pour garder une trace officielle.
+                                                    </p>
+                                                    <label style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '10px',
+                                                        padding: '0.75rem 1rem',
+                                                        background: '#fff',
+                                                        borderRadius: '8px',
+                                                        border: '1.5px dashed #FCD34D',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.9rem',
+                                                        color: '#92400E'
+                                                    }}>
+                                                        <UploadCloud size={20} color="#D97706" />
+                                                        {uploadingProof ? 'Envoi en cours...' : 'Choisir un reçu (image ou PDF)'}
+                                                        <input type="file" accept="image/*,.pdf" onChange={handleProofUpload} disabled={uploadingProof} style={{ display: 'none' }} />
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

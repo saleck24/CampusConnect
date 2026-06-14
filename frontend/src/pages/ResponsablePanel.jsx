@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { 
     Calendar, Users, Wallet, Trash2, Edit, Plus, 
-    ArrowUpRight, Clock, CheckCircle, CheckCircle2, AlertCircle, Mail, UserMinus, Phone, X
+    ArrowUpRight, Clock, CheckCircle, CheckCircle2, AlertCircle, Mail, UserMinus, Phone, X, UploadCloud, Eye,
+    HeartHandshake, BadgeDollarSign, RefreshCw, Gift
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -24,12 +25,17 @@ const ResponsablePanel = () => {
     const [members, setMembers] = useState([]);
     const [pendingMembers, setPendingMembers] = useState([]);
     const [finances, setFinances] = useState({ transactions: [], totalRevenue: 0 });
+    const [donations, setDonations] = useState([]);
+    const [contributions, setContributions] = useState([]);
+    const [financeSubTab, setFinanceSubTab] = useState('events');
     const [loading, setLoading] = useState(true);
     const [association, setAssociation] = useState(null);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
     // Popup de succès et modale de confirmation
     const [successPopup, setSuccessPopup] = useState({ visible: false, message: '' });
     const [confirmModal, setConfirmModal] = useState({ visible: false, message: '', onConfirm: null });
+    const [feedbackModal, setFeedbackModal] = useState({ visible: false, type: 'success', message: '' });
+    const [uploadingProof, setUploadingProof] = useState(false);
 
     useEffect(() => {
         loadAssociation();
@@ -63,8 +69,14 @@ const ResponsablePanel = () => {
                 setMembers(membersRes.data);
                 setPendingMembers(pendingRes.data);
             } else if (activeTab === 'finances') {
-                const res = await api.get('associations/my-association/finances');
-                setFinances(res.data);
+                const [finRes, donRes, contribRes] = await Promise.all([
+                    api.get('associations/my-association/finances'),
+                    api.get('donations/my-asso').catch(() => ({ data: [] })),
+                    api.get('donations/my-asso/contributions').catch(() => ({ data: [] }))
+                ]);
+                setFinances(finRes.data);
+                setDonations(donRes.data);
+                setContributions(contribRes.data);
             }
         } catch (error) {
             console.error(`Erreur chargement ${activeTab}:`, error);
@@ -88,9 +100,9 @@ const ResponsablePanel = () => {
             try {
                 await api.delete(`events/${id}`);
                 setEvents(events.filter(e => e.id !== id));
-                showSuccess('Événement annulé avec succès.');
+                setFeedbackModal({ visible: true, type: 'success', message: 'Événement annulé avec succès.' });
             } catch (error) {
-                setStatusMsg({ type: 'error', text: 'Erreur lors de la suppression.' });
+                setFeedbackModal({ visible: true, type: 'error', message: 'Erreur lors de la suppression.' });
             }
         });
     };
@@ -100,9 +112,9 @@ const ResponsablePanel = () => {
             try {
                 await api.delete(`associations/my-association/members/${userId}`);
                 setMembers(members.filter(m => m.id !== userId));
-                showSuccess('Adhérent révoqué avec succès.');
+                setFeedbackModal({ visible: true, type: 'success', message: 'Adhérent révoqué avec succès.' });
             } catch (error) {
-                setStatusMsg({ type: 'error', text: 'Erreur lors de la révocation.' });
+                setFeedbackModal({ visible: true, type: 'error', message: 'Erreur lors de la révocation.' });
             }
         });
     };
@@ -112,9 +124,33 @@ const ResponsablePanel = () => {
             try {
                 await api.put(`registrations/${registrationId}/validate`);
                 loadData();
-                showSuccess('Paiement effectué !');
+                setFeedbackModal({ visible: true, type: 'success', message: 'Paiement effectué !' });
             } catch (error) {
-                setStatusMsg({ type: 'error', text: 'Erreur lors de la validation du paiement.' });
+                setFeedbackModal({ visible: true, type: 'error', message: 'Erreur lors de la validation du paiement.' });
+            }
+        });
+    };
+
+    const handleValidateDonation = async (donationId) => {
+        askConfirm("Confirmer la réception de ce don ?", async () => {
+            try {
+                await api.put(`donations/${donationId}/validate`);
+                setDonations(prev => prev.map(d => d.id === donationId ? { ...d, status: 'VALIDE' } : d));
+                setFeedbackModal({ visible: true, type: 'success', message: 'Don validé avec succès !' });
+            } catch (error) {
+                setFeedbackModal({ visible: true, type: 'error', message: 'Erreur lors de la validation du don.' });
+            }
+        });
+    };
+
+    const handleValidateContribution = async (contribId) => {
+        askConfirm("Confirmer le paiement de cette cotisation ?", async () => {
+            try {
+                await api.put(`donations/contributions/${contribId}/validate`);
+                setContributions(prev => prev.map(c => c.id === contribId ? { ...c, status: 'PAYE' } : c));
+                setFeedbackModal({ visible: true, type: 'success', message: 'Cotisation validée !' });
+            } catch (error) {
+                setFeedbackModal({ visible: true, type: 'error', message: 'Erreur lors de la validation de la cotisation.' });
             }
         });
     };
@@ -125,9 +161,9 @@ const ResponsablePanel = () => {
                 await api.put(`associations/my-association/members/${userId}/validate-payment`);
                 const res = await api.get('associations/my-association/members');
                 setMembers(res.data);
-                showSuccess('Cotisation validée ! La commission CampusConnect a été calculée automatiquement.');
+                setFeedbackModal({ visible: true, type: 'success', message: 'Cotisation validée ! La commission CampusConnect a été calculée automatiquement.' });
             } catch (error) {
-                setStatusMsg({ type: 'error', text: error.response?.data?.message || 'Erreur lors de la validation de la cotisation.' });
+                setFeedbackModal({ visible: true, type: 'error', message: error.response?.data?.message || 'Erreur lors de la validation de la cotisation.' });
             }
         });
     };
@@ -139,9 +175,9 @@ const ResponsablePanel = () => {
             // Recharger les membres approuvés
             const res = await api.get('associations/my-association/members');
             setMembers(res.data);
-            setStatusMsg({ type: 'success', text: 'Adhésion approuvée !' });
+            setFeedbackModal({ visible: true, type: 'success', message: 'Adhésion approuvée !' });
         } catch (error) {
-            setStatusMsg({ type: 'error', text: 'Erreur lors de l\'approbation.' });
+            setFeedbackModal({ visible: true, type: 'error', message: 'Erreur lors de l\'approbation.' });
         }
     };
 
@@ -149,15 +185,41 @@ const ResponsablePanel = () => {
         e.preventDefault();
         const fee = parseFloat(e.target.membership_fee.value);
         if (isNaN(fee) || fee < 0) {
-            setStatusMsg({ type: 'error', text: 'Montant de cotisation invalide.' });
+            setFeedbackModal({ visible: true, type: 'error', message: 'Montant de cotisation invalide.' });
             return;
         }
         try {
             await api.put('associations/my-association/settings', { membership_fee: fee });
             setAssociation(prev => ({ ...prev, membership_fee: fee }));
-            showSuccess(`Cotisation annuelle mise à jour : ${fee} MRU`);
+            setFeedbackModal({ visible: true, type: 'success', message: `Cotisation annuelle mise à jour avec succès : ${fee} MRU` });
         } catch (error) {
-            setStatusMsg({ type: 'error', text: error.response?.data?.message || 'Erreur lors de la mise à jour.' });
+            setFeedbackModal({ visible: true, type: 'error', message: error.response?.data?.message || 'Erreur lors de la mise à jour.' });
+        }
+    };
+
+    const handleProofUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file || !association) return;
+
+        const formData = new FormData();
+        formData.append('proof', file);
+
+        setUploadingProof(true);
+        try {
+            const res = await api.post(`associations/${association.id}/premium-proof`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setAssociation(prev => ({
+                ...prev,
+                payment_proof_url: res.data.payment_proof_url,
+                payment_status: 'EN_ATTENTE'
+            }));
+            setFeedbackModal({ visible: true, type: 'success', message: 'Reçu de paiement envoyé avec succès. En attente de validation.' });
+        } catch (err) {
+            console.error('Erreur upload:', err);
+            setFeedbackModal({ visible: true, type: 'error', message: "Erreur lors de l'envoi du reçu." });
+        } finally {
+            setUploadingProof(false);
         }
     };
 
@@ -217,6 +279,46 @@ const ResponsablePanel = () => {
                                 style={{ padding: '10px 24px', fontWeight: '700' }}
                             >
                                 Confirmer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== MODALE DE FEEDBACK (Succès / Erreur) ===== */}
+            {feedbackModal.visible && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9998,
+                    background: 'rgba(15,23,42,0.5)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div className="animate-fade-in" style={{
+                        background: '#fff', borderRadius: '20px', padding: '36px',
+                        maxWidth: '400px', width: '90%', textAlign: 'center',
+                        boxShadow: '0 24px 60px rgba(0,0,0,0.2)'
+                    }}>
+                        {feedbackModal.type === 'success' ? (
+                            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <CheckCircle2 size={28} color="#059669" />
+                            </div>
+                        ) : (
+                            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <AlertCircle size={28} color="#DC2626" />
+                            </div>
+                        )}
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--ink)' }}>
+                            {feedbackModal.type === 'success' ? 'Succès' : 'Erreur'}
+                        </h3>
+                        <p style={{ color: 'var(--ink3)', fontSize: '14px', marginBottom: '28px', lineHeight: 1.6 }}>
+                            {feedbackModal.message}
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setFeedbackModal({ visible: false, type: 'success', message: '' })}
+                                className="btn btn-primary"
+                                style={{ padding: '10px 32px', fontWeight: '700' }}
+                            >
+                                Fermer
                             </button>
                         </div>
                     </div>
@@ -292,7 +394,7 @@ const ResponsablePanel = () => {
                 </div>
 
                 <div className="flex gap-3" style={{ alignItems: 'center' }}>
-                    {association && association.plan === 'free' && (
+                    {association && association.plan === 'free' && association.payment_status !== 'EN_ATTENTE' && (
                         <button 
                             onClick={() => {
                                 let userName = '';
@@ -317,8 +419,25 @@ const ResponsablePanel = () => {
                                 height: 'fit-content'
                             }}
                         >
-                            <WhatsappIcon size={18} /> Passer Premium
+                            <WhatsappIcon size={18} /> Payer Premium (500 MRU)
                         </button>
+                    )}
+                    {association && association.plan === 'free' && association.payment_status === 'EN_ATTENTE' && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '10px 14px',
+                            backgroundColor: '#FEF3C7',
+                            color: '#D97706',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            height: 'fit-content',
+                            border: '1px solid #FCD34D'
+                        }}>
+                            <Clock size={16} /> Premium en attente
+                        </div>
                     )}
                     {activeTab === 'events' && (
                         <Link to="/create-event" className="btn btn-primary flex items-center gap-2" style={{ padding: '12px 18px', fontSize: '14px', borderRadius: '12px', height: 'fit-content', textDecoration: 'none' }}>
@@ -549,58 +668,142 @@ const ResponsablePanel = () => {
                                         <Wallet size={48} color="var(--ink3)" style={{ margin: '0 auto 16px' }} />
                                         <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px' }}>Tableau de bord financier</h3>
                                         <p style={{ color: 'var(--ink3)', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
-                                            Le suivi de la trésorerie et la validation des paiements sont des fonctionnalités réservées au plan Premium.
+                                            Le suivi de la trésorerie et la validation des paiements sont des fonctionnalités réservées au plan Premium (500 MRU / mois).
                                         </p>
-                                        <button 
-                                            onClick={() => {
-                                                let userName = '';
-                                                try {
-                                                    const stored = localStorage.getItem('user');
-                                                    if (stored) userName = JSON.parse(stored).name || '';
-                                                } catch (e) {}
-                                                const msg = `Bonjour, je m'appelle ${userName} responsable de l'association ${association.name} souhaite passer au plan premium.`;
-                                                window.open(`https://wa.me/22243455259?text=${encodeURIComponent(msg)}`, '_blank');
-                                            }}
-                                            className="btn"
-                                            style={{ 
-                                                backgroundColor: '#25D366', 
-                                                color: '#fff', 
-                                                fontWeight: '700',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                padding: '6px 12px',
-                                                fontSize: '12px',
-                                                height: 'fit-content'
-                                            }}
-                                        >
-                                            <WhatsappIcon size={14} /> Passer Premium
-                                        </button>
+                                        
+                                        {association.payment_status === 'EN_ATTENTE' ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#FEF3C7', color: '#D97706', borderRadius: '12px', fontWeight: '700' }}>
+                                                    <Clock size={18} /> Paiement en attente de validation par l'administrateur
+                                                </div>
+                                                {association.payment_proof_url && (
+                                                    <a
+                                                        href={`http://localhost:5000${association.payment_proof_url}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="btn btn-secondary flex items-center gap-2"
+                                                        style={{ width: 'fit-content', color: '#D97706' }}
+                                                    >
+                                                        <Eye size={16} /> Voir le reçu envoyé
+                                                    </a>
+                                                )}
+                                                <label style={{ cursor: 'pointer', fontSize: '13px', color: 'var(--ink3)', marginTop: '8px' }}>
+                                                    Modifier le reçu :
+                                                    <input type="file" accept="image/*,.pdf" onChange={handleProofUpload} disabled={uploadingProof} style={{ display: 'block', marginTop: '4px' }} />
+                                                </label>
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                                                <button 
+                                                    onClick={() => {
+                                                        let userName = '';
+                                                        try {
+                                                            const stored = localStorage.getItem('user');
+                                                            if (stored) userName = JSON.parse(stored).name || '';
+                                                        } catch (e) {}
+                                                        const msg = `Bonjour, je m'appelle ${userName} responsable de l'association ${association.name} souhaite passer au plan premium.`;
+                                                        window.open(`https://wa.me/22243455259?text=${encodeURIComponent(msg)}`, '_blank');
+                                                    }}
+                                                    className="btn"
+                                                    style={{ 
+                                                        backgroundColor: '#25D366', color: '#fff', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px'
+                                                    }}
+                                                >
+                                                    <WhatsappIcon size={18} /> 1. Payer 500 MRU via WhatsApp
+                                                </button>
+                                                
+                                                <div style={{ 
+                                                    background: '#fff', padding: '24px', borderRadius: '16px', border: '1.5px dashed #FCD34D', maxWidth: '400px', width: '100%' 
+                                                }}>
+                                                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#92400E', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                                        <UploadCloud size={18} /> 2. Envoyer le reçu
+                                                    </h4>
+                                                    <p style={{ fontSize: '13px', color: '#78350F', marginBottom: '16px' }}>
+                                                        Après avoir effectué le paiement, déposez la capture d'écran ici pour validation rapide.
+                                                    </p>
+                                                    <label style={{
+                                                        display: 'inline-block', padding: '10px 20px', background: '#FEF3C7', color: '#B45309', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px'
+                                                    }}>
+                                                        {uploadingProof ? 'Envoi en cours...' : 'Choisir le reçu (Image ou PDF)'}
+                                                        <input type="file" accept="image/*,.pdf" onChange={handleProofUpload} disabled={uploadingProof} style={{ display: 'none' }} />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <>
-                                {/* Treasury Summary Card */}
-                                <div style={{ 
-                                    background: 'var(--indigo)', 
-                                    padding: '32px', 
-                                    borderRadius: '20px', 
-                                    color: '#fff', 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: '40px',
-                                    boxShadow: '0 12px 24px rgba(79, 70, 229, 0.2)'
-                                }}>
-                                    <div>
-                                        <p style={{ opacity: 0.8, fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Trésorerie Totale</p>
-                                        <h2 style={{ fontSize: '36px', fontWeight: '800' }}>{finances.totalRevenue.toLocaleString()} MRU</h2>
-                                    </div>
-                                    <div style={{ background: 'rgba(255,255,255,0.1)', padding: '16px', borderRadius: '16px' }}>
-                                        <Wallet size={32} />
-                                    </div>
+                                {/* ── KPI Cards ─────────────────────── */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                                    {[
+                                        {
+                                            label: 'Trésorerie Événements',
+                                            value: `${finances.totalRevenue?.toLocaleString() ?? 0} MRU`,
+                                            icon: <Calendar size={22} />,
+                                            color: 'var(--indigo)',
+                                            bg: 'var(--indigo-light)'
+                                        },
+                                        {
+                                            label: 'Dons reçus',
+                                            value: `${donations.filter(d => d.status === 'VALIDE' && d.donation_type === 'MONETARY').reduce((s, d) => s + parseFloat(d.amount || 0), 0).toLocaleString()} MRU`,
+                                            icon: <HeartHandshake size={22} />,
+                                            color: '#059669',
+                                            bg: '#D1FAE5'
+                                        },
+                                        {
+                                            label: 'Cotisations perçues',
+                                            value: `${contributions.filter(c => c.status === 'PAYE').reduce((s, c) => s + parseFloat(c.amount || 0), 0).toLocaleString()} MRU`,
+                                            icon: <RefreshCw size={22} />,
+                                            color: '#7C3AED',
+                                            bg: '#EDE9FE'
+                                        },
+                                        {
+                                            label: 'Dons en nature',
+                                            value: `${donations.filter(d => d.donation_type === 'IN_KIND').length} don(s)`,
+                                            icon: <Gift size={22} />,
+                                            color: '#D97706',
+                                            bg: '#FEF3C7'
+                                        }
+                                    ].map((kpi, i) => (
+                                        <div key={i} style={{ background: '#fff', border: '1px solid var(--borderl)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <div style={{ background: kpi.bg, color: kpi.color, borderRadius: '12px', padding: '12px', flexShrink: 0 }}>
+                                                {kpi.icon}
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: '12px', color: 'var(--ink3)', fontWeight: '600', marginBottom: '2px' }}>{kpi.label}</p>
+                                                <p style={{ fontSize: '20px', fontWeight: '800', color: 'var(--ink)' }}>{kpi.value}</p>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
 
-                                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Journal des Transactions</h3>
+                                {/* ── Finance Sub-Tabs ───────────────── */}
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid var(--borderl)', paddingBottom: '0' }}>
+                                    {[
+                                        { id: 'events', label: 'Événements', icon: <Calendar size={15} /> },
+                                        { id: 'donations', label: 'Dons', icon: <HeartHandshake size={15} /> },
+                                        { id: 'contributions', label: 'Cotisations récurrentes', icon: <RefreshCw size={15} /> }
+                                    ].map(st => (
+                                        <button
+                                            key={st.id}
+                                            onClick={() => setFinanceSubTab(st.id)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                padding: '10px 18px', border: 'none', borderRadius: '10px 10px 0 0',
+                                                fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                                                background: financeSubTab === st.id ? '#fff' : 'transparent',
+                                                color: financeSubTab === st.id ? 'var(--indigo)' : 'var(--ink3)',
+                                                borderBottom: financeSubTab === st.id ? '2px solid var(--indigo)' : '2px solid transparent',
+                                                marginBottom: '-2px', transition: '0.15s'
+                                            }}
+                                        >
+                                            {st.icon} {st.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* ── Sub-tab: Événements ───────────── */}
+                                {financeSubTab === 'events' && (
                                 <div style={{ border: '1px solid var(--borderl)', borderRadius: '16px', overflow: 'hidden' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead style={{ background: 'var(--surf2)' }}>
@@ -610,11 +813,13 @@ const ResponsablePanel = () => {
                                                 <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>ÉVÉNEMENT</th>
                                                 <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>MONTANT</th>
                                                 <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>STATUT</th>
-                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700' }}>PAIEMENT</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700' }}>ACTION</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {finances.transactions.map(t => (
+                                            {finances.transactions.length === 0 ? (
+                                                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--ink3)' }}>Aucune transaction</td></tr>
+                                            ) : finances.transactions.map(t => (
                                                 <tr key={t.id} style={{ borderBottom: '1px solid var(--borderl)' }}>
                                                     <td style={{ padding: '16px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>{new Date(t.date).toLocaleDateString()}</td>
                                                     <td style={{ padding: '16px', fontSize: '14px', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>{t.user_name}</td>
@@ -623,34 +828,113 @@ const ResponsablePanel = () => {
                                                         {t.payment_status === 'GRATUIT' ? <span style={{ color: 'var(--ink3)' }}>—</span> : `${t.amount} MRU`}
                                                     </td>
                                                     <td style={{ padding: '16px', borderRight: '1px solid var(--borderl)' }}>
-                                                        {t.payment_status === 'EN_ATTENTE' && (
-                                                            <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#FEF3C7', color: '#D97706' }}>EN ATTENTE</span>
-                                                        )}
-                                                        {t.payment_status === 'PAYE' && (
-                                                            <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#D1FAE5', color: '#059669' }}>PAYÉ</span>
-                                                        )}
-                                                        {t.payment_status === 'GRATUIT' && (
-                                                            <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: 'var(--surf3)', color: 'var(--ink3)' }}>GRATUIT</span>
-                                                        )}
+                                                        {t.payment_status === 'EN_ATTENTE' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#FEF3C7', color: '#D97706' }}>EN ATTENTE</span>}
+                                                        {t.payment_status === 'PAYE' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#D1FAE5', color: '#059669' }}>PAYÉ</span>}
+                                                        {t.payment_status === 'GRATUIT' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: 'var(--surf3)', color: 'var(--ink3)' }}>GRATUIT</span>}
                                                     </td>
                                                     <td style={{ padding: '16px' }}>
                                                         {t.payment_status === 'EN_ATTENTE' ? (
-                                                            <button
-                                                                onClick={() => handleValidatePayment(t.id)}
-                                                                className="btn btn-primary"
-                                                                style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '700' }}
-                                                            >
-                                                                Valider
-                                                            </button>
-                                                        ) : (
-                                                            <span style={{ fontSize: '12px', color: 'var(--ink3)' }}>—</span>
-                                                        )}
+                                                            <button onClick={() => handleValidatePayment(t.id)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '700' }}>Valider</button>
+                                                        ) : <span style={{ fontSize: '12px', color: 'var(--ink3)' }}>—</span>}
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
+                                )}
+
+                                {/* ── Sub-tab: Dons ─────────────────── */}
+                                {financeSubTab === 'donations' && (
+                                <div style={{ border: '1px solid var(--borderl)', borderRadius: '16px', overflow: 'hidden' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead style={{ background: 'var(--surf2)' }}>
+                                            <tr style={{ textAlign: 'left' }}>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>DATE</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>DONATEUR</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>TYPE</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>MONTANT / DESCRIPTION</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>STATUT</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700' }}>ACTION</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {donations.length === 0 ? (
+                                                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--ink3)' }}>Aucun don reçu pour l'instant</td></tr>
+                                            ) : donations.map(d => (
+                                                <tr key={d.id} style={{ borderBottom: '1px solid var(--borderl)' }}>
+                                                    <td style={{ padding: '16px', fontSize: '13px', color: 'var(--ink3)', borderRight: '1px solid var(--borderl)' }}>{new Date(d.created_at).toLocaleDateString()}</td>
+                                                    <td style={{ padding: '16px', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>
+                                                        <div>{d.donor_name}</div>
+                                                        {d.donor_email && <div style={{ fontSize: '12px', color: 'var(--ink3)' }}>{d.donor_email}</div>}
+                                                    </td>
+                                                    <td style={{ padding: '16px', borderRight: '1px solid var(--borderl)' }}>
+                                                        {d.donation_type === 'MONETARY'
+                                                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', background: '#EDE9FE', color: '#7C3AED', padding: '3px 10px', borderRadius: '6px', fontWeight: '700' }}><BadgeDollarSign size={12} /> Financier</span>
+                                                            : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', background: '#FEF3C7', color: '#D97706', padding: '3px 10px', borderRadius: '6px', fontWeight: '700' }}><Gift size={12} /> En nature</span>}
+                                                    </td>
+                                                    <td style={{ padding: '16px', fontWeight: '700', color: 'var(--indigo)', borderRight: '1px solid var(--borderl)' }}>
+                                                        {d.donation_type === 'MONETARY' ? `${parseFloat(d.amount).toLocaleString()} MRU` : d.item_description}
+                                                        {d.donation_type === 'MONETARY' && d.commission_amount && (
+                                                            <div style={{ fontSize: '11px', color: 'var(--ink3)', fontWeight: '500' }}>Commission: {parseFloat(d.commission_amount).toLocaleString()} MRU</div>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '16px', borderRight: '1px solid var(--borderl)' }}>
+                                                        {d.status === 'EN_ATTENTE' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#FEF3C7', color: '#D97706' }}>EN ATTENTE</span>}
+                                                        {d.status === 'VALIDE' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#D1FAE5', color: '#059669' }}>VALIDÉ</span>}
+                                                        {d.status === 'REFUSE' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#FEE2E2', color: '#DC2626' }}>REFUSÉ</span>}
+                                                    </td>
+                                                    <td style={{ padding: '16px' }}>
+                                                        {d.status === 'EN_ATTENTE' ? (
+                                                            <button onClick={() => handleValidateDonation(d.id)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '700', background: '#059669' }}>Confirmer réception</button>
+                                                        ) : <span style={{ fontSize: '12px', color: 'var(--ink3)' }}>—</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                )}
+
+                                {/* ── Sub-tab: Cotisations récurrentes ─ */}
+                                {financeSubTab === 'contributions' && (
+                                <div style={{ border: '1px solid var(--borderl)', borderRadius: '16px', overflow: 'hidden' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead style={{ background: 'var(--surf2)' }}>
+                                            <tr style={{ textAlign: 'left' }}>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>PÉRIODE</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>MEMBRE</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>MONTANT DÛ</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>STATUT</th>
+                                                <th style={{ padding: '16px', fontSize: '12px', fontWeight: '700' }}>ACTION</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {contributions.length === 0 ? (
+                                                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--ink3)' }}>Aucune cotisation récurrente enregistrée</td></tr>
+                                            ) : contributions.map(c => (
+                                                <tr key={c.id} style={{ borderBottom: '1px solid var(--borderl)' }}>
+                                                    <td style={{ padding: '16px', fontSize: '13px', fontWeight: '700', borderRight: '1px solid var(--borderl)' }}>{c.period}</td>
+                                                    <td style={{ padding: '16px', fontWeight: '600', borderRight: '1px solid var(--borderl)' }}>
+                                                        <div>{c.member_name}</div>
+                                                        <div style={{ fontSize: '12px', color: 'var(--ink3)' }}>{c.member_email}</div>
+                                                    </td>
+                                                    <td style={{ padding: '16px', fontWeight: '700', color: 'var(--indigo)', borderRight: '1px solid var(--borderl)' }}>{parseFloat(c.amount).toLocaleString()} MRU</td>
+                                                    <td style={{ padding: '16px', borderRight: '1px solid var(--borderl)' }}>
+                                                        {c.status === 'EN_ATTENTE' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#FEF3C7', color: '#D97706' }}>EN ATTENTE</span>}
+                                                        {c.status === 'PAYE' && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', background: '#D1FAE5', color: '#059669' }}>PAYÉ</span>}
+                                                    </td>
+                                                    <td style={{ padding: '16px' }}>
+                                                        {c.status === 'EN_ATTENTE' ? (
+                                                            <button onClick={() => handleValidateContribution(c.id)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '12px', fontWeight: '700' }}>Valider paiement</button>
+                                                        ) : <span style={{ fontSize: '12px', color: 'var(--ink3)' }}>—</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                )}
                                     </>
                                 )}
                             </div>

@@ -10,11 +10,20 @@ const getEventDetail = async (req, res) => {
 
         const registrationCount = await eventModel.getRegistrationCount(eventId);
         let isRegistered = false;
+        let registration = null;
         if (req.user) {
-            isRegistered = await eventModel.isUserRegistered(req.user.id, eventId);
+            const pool = require('../config/db');
+            const [regRows] = await pool.execute(
+                'SELECT * FROM registrations WHERE user_id = ? AND event_id = ?',
+                [req.user.id, eventId]
+            );
+            if (regRows.length > 0) {
+                isRegistered = true;
+                registration = regRows[0];
+            }
         }
 
-        res.status(200).json({ event, registrationCount, isRegistered });
+        res.status(200).json({ event, registrationCount, isRegistered, registration });
     } catch (error) {
         console.error('Erreur getEventDetail:', error);
         res.status(500).json({ message: 'Erreur serveur.' });
@@ -155,8 +164,23 @@ const registerToEvent = async (req, res) => {
                 price = Number((price * 0.8).toFixed(2));
             }
 
-            await eventModel.register({ user_id: userId, event_id: eventId, price });
-            return res.status(201).json({ message: 'Inscription réussie !' });
+            const registrationId = await eventModel.register({ user_id: userId, event_id: eventId, price });
+
+            // Envoyer un mail de confirmation d'inscription
+            const { sendEmail } = require('../utils/emailService');
+            const dateStr = new Date(event.date).toLocaleString('fr-FR');
+            const subject = `Confirmation d'inscription : ${event.title}`;
+            const htmlContent = `
+                <h2>Confirmation d'inscription</h2>
+                <p>Bonjour ${req.user.name},</p>
+                <p>Votre inscription à l'événement <strong>${event.title}</strong> a été enregistrée avec succès.</p>
+                <p><strong>Date :</strong> ${dateStr}<br>
+                <strong>Lieu :</strong> ${event.location || 'Non spécifié'}</p>
+                <p>L'équipe CampusConnect</p>
+            `;
+            await sendEmail(req.user.email, subject, htmlContent);
+
+            return res.status(201).json({ message: 'Inscription réussie !', registrationId });
         }
 
         // -----------------------------------------------
@@ -177,13 +201,28 @@ const registerToEvent = async (req, res) => {
         // Un visiteur paie toujours le tarif invité (guest_price)
         let price = event.is_paid ? event.guest_price : 0;
 
-        // Réduction de 20% pour les 10 premiers inscrits aux événements payants (retour prof/choix utilisateur)
+        // Réduction de 20% pour les 10 premiers inscrits aux événements payants (retour proof/choix utilisateur)
         if (event.is_paid && currentRegistrations < 10) {
             price = Number((price * 0.8).toFixed(2));
         }
 
-        await eventModel.register({ user_id: null, event_id: eventId, price, guest_name, guest_email, guest_phone });
-        return res.status(201).json({ message: 'Inscription réussie en tant qu\'invité !' });
+        const registrationId = await eventModel.register({ user_id: null, event_id: eventId, price, guest_name, guest_email, guest_phone });
+
+        // Envoyer un mail de confirmation d'inscription
+        const { sendEmail } = require('../utils/emailService');
+        const dateStr = new Date(event.date).toLocaleString('fr-FR');
+        const subject = `Confirmation d'inscription : ${event.title}`;
+        const htmlContent = `
+            <h2>Confirmation d'inscription</h2>
+            <p>Bonjour ${guest_name},</p>
+            <p>Votre inscription à l'événement <strong>${event.title}</strong> en tant qu'invité a été enregistrée avec succès.</p>
+            <p><strong>Date :</strong> ${dateStr}<br>
+            <strong>Lieu :</strong> ${event.location || 'Non spécifié'}</p>
+            <p>L'équipe CampusConnect</p>
+        `;
+        await sendEmail(guest_email, subject, htmlContent);
+
+        return res.status(201).json({ message: 'Inscription réussie en tant qu\'invité !', registrationId });
 
     } catch (error) {
         console.error('Erreur registerToEvent:', error);
@@ -331,6 +370,46 @@ const getFeaturedEvents = async (req, res) => {
     }
 };
 
+const runReminderCronTest = async (req, res) => {
+    console.log('>>> [TEST CRON] Déclenchement manuel du rappel d\'événements...');
+    try {
+        // Pour les tests, on élargit la recherche des événements commençant entre -24h et 24h
+        const upcomingEvents = await eventModel.findEventsStartingBetween(-24, 24);
+
+        if (upcomingEvents.length === 0) {
+            return res.status(200).json({ message: "Aucun événement trouvé commençant entre -24h et +24h." });
+        }
+
+        const reports = [];
+        const { sendEmail } = require('../utils/emailService');
+
+        for (const event of upcomingEvents) {
+            const participants = await eventModel.getParticipants(event.id);
+            if (participants.length > 0) {
+                const date = new Date(event.date).toLocaleString('fr-FR');
+                
+                for (const p of participants) {
+                    const subject = `Rappel : L'événement "${event.title}" approche !`;
+                    const htmlContent = `
+                        <h2>Rappel d'événement</h2>
+                        <p>Bonjour ${p.name},</p>
+                        <p>Ceci est un rappel automatique pour l'événement <strong>${event.title}</strong> auquel vous êtes inscrit.</p>
+                        <p><strong>Date :</strong> ${date}<br>
+                        <strong>Lieu :</strong> ${event.location || 'Non spécifié'}</p>
+                        <p>À très bientôt sur CampusConnect !</p>
+                    `;
+                    const sent = await sendEmail(p.email, subject, htmlContent);
+                    reports.push({ event: event.title, email: p.email, status: sent ? 'success' : 'failed' });
+                }
+            }
+        }
+        res.status(200).json({ message: "Rappels de test traités.", details: reports });
+    } catch (error) {
+        console.error('>>> [TEST CRON] Erreur :', error);
+        res.status(500).json({ message: "Erreur lors du rappel de test.", error: error.message });
+    }
+};
+
 module.exports = {
     getEvents,
     getMyEvents,
@@ -341,5 +420,7 @@ module.exports = {
     updateEvent,
     deleteEvent,
     getEventParticipants,
-    getFeaturedEvents
+    getFeaturedEvents,
+    runReminderCronTest
 };
+
